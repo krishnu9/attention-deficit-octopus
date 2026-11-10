@@ -9,7 +9,7 @@ import {
   type Review,
   type Summary,
 } from "@/lib/client";
-import { Card, btn, input, label } from "@/components/ui";
+import { Card, BusyButton, LoadError, Skeleton, input, label } from "@/components/ui";
 import { Hint } from "@/components/hint";
 import type { HintKey } from "@/lib/hints";
 
@@ -43,7 +43,12 @@ export default function WeekPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWeek(currentMonday());
   }, []);
-  const { data: summary } = useSWR<Summary>(
+  const {
+    data: summary,
+    isLoading,
+    error,
+    mutate: retrySummary,
+  } = useSWR<Summary>(
     week ? `/api/v1/summary?week=${week}` : null,
     fetcher,
   );
@@ -51,20 +56,26 @@ export default function WeekPage() {
     week ? `/api/v1/review?week=${week}` : null,
     fetcher,
   );
+  const [saving, setSaving] = useState(false);
 
   async function saveReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    await api("/api/v1/review", {
-      method: "POST",
-      body: JSON.stringify({
-        weekStart: week,
-        wentWell: form.get("wentWell"),
-        didntGoWell: form.get("didntGoWell"),
-        nextFocus: form.get("nextFocus"),
-      }),
-    });
-    mutateReview();
+    setSaving(true);
+    try {
+      await api("/api/v1/review", {
+        method: "POST",
+        body: JSON.stringify({
+          weekStart: week,
+          wentWell: form.get("wentWell"),
+          didntGoWell: form.get("didntGoWell"),
+          nextFocus: form.get("nextFocus"),
+        }),
+      });
+      mutateReview();
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -82,7 +93,17 @@ export default function WeekPage() {
         />
       </header>
 
-      {summary ? (
+      {error ? (
+        <LoadError message="Could not load this week." onRetry={() => retrySummary()} />
+      ) : null}
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-[74px] w-full" />
+          ))}
+        </div>
+      ) : summary ? (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Stat
@@ -127,8 +148,8 @@ export default function WeekPage() {
             </Card>
           ) : null}
         </>
-      ) : (
-        <p className="text-sm text-muted">Loading…</p>
+      ) : error ? null : (
+        <p className="text-sm text-muted">No data for this week yet.</p>
       )}
 
       <Card>
@@ -161,9 +182,9 @@ export default function WeekPage() {
             placeholder="One thing to focus on next week"
             className={`${input} resize-y`}
           />
-          <button className={btn} type="submit">
-            Save review
-          </button>
+          <BusyButton busy={saving} type="submit">
+            {saving ? "Saving" : "Save review"}
+          </BusyButton>
         </form>
       </Card>
     </div>

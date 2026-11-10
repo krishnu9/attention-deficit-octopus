@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Hint } from "@/components/hint";
-import { Card, btn, btnGhost, input, label } from "@/components/ui";
+import {
+  BusyButton,
+  Card,
+  Skeleton,
+  btnGhost,
+  input,
+  label,
+} from "@/components/ui";
 
 type ApiKey = {
   id: string;
@@ -18,21 +25,33 @@ export default function SettingsPage() {
   const [newKey, setNewKey] = useState("");
   const [keyName, setKeyName] = useState("agents");
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [loadingKeys, setLoadingKeys] = useState(true);
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
   });
 
   async function loadKeys() {
-    const { data } = await authClient.apiKey.list();
-    setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
+    setLoadingKeys(true);
+    try {
+      const { data } = await authClient.apiKey.list();
+      setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
+    } finally {
+      setLoadingKeys(false);
+    }
   }
 
   useEffect(() => {
     let active = true;
-    authClient.apiKey.list().then(({ data }) => {
-      if (active) setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
-    });
+    authClient.apiKey
+      .list()
+      .then(({ data }) => {
+        if (active) setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
+      })
+      .finally(() => {
+        if (active) setLoadingKeys(false);
+      });
     return () => {
       active = false;
     };
@@ -42,63 +61,90 @@ export default function SettingsPage() {
     event.preventDefault();
     setMessage("");
     setNewKey("");
-    const { data, error } = await authClient.apiKey.create({
-      name: keyName || "agents",
-    });
-    if (error) {
-      setMessage(error.message ?? "Could not create key");
-      return;
+    setBusy("create");
+    try {
+      const { data, error } = await authClient.apiKey.create({
+        name: keyName || "agents",
+      });
+      if (error) {
+        setMessage(error.message ?? "Could not create key");
+        return;
+      }
+      setNewKey(data?.key ?? "");
+      setMessage("Copy the key now — it will not be shown again.");
+      await loadKeys();
+    } finally {
+      setBusy(null);
     }
-    setNewKey(data?.key ?? "");
-    setMessage("Copy the key now — it will not be shown again.");
-    loadKeys();
   }
 
   async function deleteKey(id: string) {
-    await authClient.apiKey.delete({ keyId: id });
-    loadKeys();
+    setBusy(`delete:${id}`);
+    try {
+      await authClient.apiKey.delete({ keyId: id });
+      await loadKeys();
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function saveCalendar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const { error } = await authClient.updateUser({
-      calendarId: String(form.get("calendarId") ?? ""),
-      timezone: String(form.get("timezone") ?? ""),
-      highlightTime: String(form.get("highlightTime") ?? ""),
-      microTime: String(form.get("microTime") ?? ""),
-      dueTime: String(form.get("dueTime") ?? ""),
-    });
-    setMessage(
-      error ? (error.message ?? "Could not save") : "Calendar settings saved.",
-    );
+    setBusy("calendar");
+    try {
+      const { error } = await authClient.updateUser({
+        calendarId: String(form.get("calendarId") ?? ""),
+        timezone: String(form.get("timezone") ?? ""),
+        highlightTime: String(form.get("highlightTime") ?? ""),
+        microTime: String(form.get("microTime") ?? ""),
+        dueTime: String(form.get("dueTime") ?? ""),
+      });
+      setMessage(
+        error ? (error.message ?? "Could not save") : "Calendar settings saved.",
+      );
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function testCalendar() {
+    setBusy("test");
     setMessage("Testing…");
-    const response = await fetch("/api/v1/calendar/health");
-    const data = await response.json();
-    if (data.configured === false) {
-      setMessage("Add GOOGLE_SERVICE_ACCOUNT_JSON in Vercel first.");
-    } else if (data.ok) {
-      setMessage("Test event created and removed. Check your calendar.");
-    } else if (data.error) {
-      setMessage(`Calendar error: ${data.error}`);
-    } else {
-      setMessage("Calendar not configured. Set a calendar ID below.");
+    try {
+      const response = await fetch("/api/v1/calendar/health");
+      const data = await response.json();
+      if (data.configured === false) {
+        setMessage("Add GOOGLE_SERVICE_ACCOUNT_JSON in Vercel first.");
+      } else if (data.ok) {
+        setMessage("Test event created and removed. Check your calendar.");
+      } else if (data.error) {
+        setMessage(`Calendar error: ${data.error}`);
+      } else {
+        setMessage("Calendar not configured. Set a calendar ID below.");
+      }
+    } finally {
+      setBusy(null);
     }
   }
 
   async function changePassword(event: React.FormEvent) {
     event.preventDefault();
-    const { error } = await authClient.changePassword({
-      currentPassword: passwords.currentPassword,
-      newPassword: passwords.newPassword,
-    });
-    setMessage(
-      error ? (error.message ?? "Could not change password") : "Password changed.",
-    );
-    setPasswords({ currentPassword: "", newPassword: "" });
+    setBusy("password");
+    try {
+      const { error } = await authClient.changePassword({
+        currentPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword,
+      });
+      setMessage(
+        error
+          ? (error.message ?? "Could not change password")
+          : "Password changed.",
+      );
+      setPasswords({ currentPassword: "", newPassword: "" });
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
@@ -109,7 +155,11 @@ export default function SettingsPage() {
       </header>
 
       {message ? (
-        <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+        >
           {message}
         </p>
       ) : null}
@@ -124,11 +174,13 @@ export default function SettingsPage() {
         <p className={`${label} flex items-center`}>
           Agent API keys <Hint k="agentKeys" />
         </p>
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2" aria-busy={loadingKeys}>
+          {loadingKeys ? <Skeleton className="h-11 w-full" /> : null}
           {keys.map((key) => (
             <div
               key={key.id}
               className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              aria-busy={busy === `delete:${key.id}`}
             >
               <span>
                 {key.name || "key"}
@@ -137,14 +189,15 @@ export default function SettingsPage() {
                 </span>
               </span>
               <button
-                className="text-xs text-danger hover:underline"
+                disabled={busy === `delete:${key.id}`}
+                className="text-xs text-danger hover:underline disabled:opacity-40"
                 onClick={() => deleteKey(key.id)}
               >
-                Revoke
+                {busy === `delete:${key.id}` ? "Revoking…" : "Revoke"}
               </button>
             </div>
           ))}
-          {keys.length === 0 ? (
+          {!loadingKeys && keys.length === 0 ? (
             <p className="text-sm text-muted">No keys yet.</p>
           ) : null}
         </div>
@@ -155,7 +208,9 @@ export default function SettingsPage() {
             placeholder="Key name"
             className={input}
           />
-          <button className={btn}>Create key</button>
+          <BusyButton busy={busy === "create"}>
+            {busy === "create" ? "Creating" : "Create key"}
+          </BusyButton>
         </form>
         {newKey ? (
           <div className="mt-3">
@@ -226,12 +281,17 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="flex gap-2 pt-1">
-            <button className={btn} type="submit">
-              Save
-            </button>
-            <button className={btnGhost} type="button" onClick={testCalendar}>
-              Test calendar
-            </button>
+            <BusyButton busy={busy === "calendar"} type="submit">
+              {busy === "calendar" ? "Saving" : "Save"}
+            </BusyButton>
+            <BusyButton
+              className={btnGhost}
+              busy={busy === "test"}
+              type="button"
+              onClick={testCalendar}
+            >
+              {busy === "test" ? "Testing" : "Test calendar"}
+            </BusyButton>
           </div>
         </form>
       </Card>
@@ -262,9 +322,9 @@ export default function SettingsPage() {
             autoComplete="new-password"
             className={input}
           />
-          <button className={btn} type="submit">
-            Change password
-          </button>
+          <BusyButton busy={busy === "password"} type="submit">
+            {busy === "password" ? "Changing" : "Change password"}
+          </BusyButton>
         </form>
       </Card>
     </div>

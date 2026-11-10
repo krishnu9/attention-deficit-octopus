@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { Spinner } from "@/components/ui";
 
 const links = [
   ["/today", "Today"],
@@ -15,11 +17,17 @@ const links = [
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
 
   async function signOut() {
-    await authClient.signOut();
-    router.push("/login");
-    router.refresh();
+    setSigningOut(true);
+    try {
+      await authClient.signOut();
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -39,9 +47,12 @@ export default function Nav() {
       ))}
       <button
         onClick={signOut}
-        className="ml-auto rounded-lg px-3 py-2 text-sm text-muted hover:text-fg"
+        disabled={signingOut}
+        aria-busy={signingOut}
+        className="ml-auto inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-40"
       >
-        Sign out
+        {signingOut ? <Spinner /> : null}
+        {signingOut ? "Signing out" : "Sign out"}
       </button>
     </nav>
   );
