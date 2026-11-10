@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kaizen OS
 
-## Getting Started
+A tiny daily system for ADHD brains, hosted on Vercel with Neon Postgres.
+Multi-user dashboard for humans, per-user REST API for agents, optional Google
+Calendar events.
 
-First, run the development server:
+## Screens
+
+- **Today** — energy, brain dump, one highlight, one 2-minute commitment, focus sprint, overwhelm mode, pick-for-me.
+- **Inbox** — capture first, triage later (bucket, energy, first step).
+- **Week** — highlight completion, focus minutes, urgent share, estimate vs actual, weekly review.
+- **Projects** — goals and projects with progress bars.
+- **Settings** — account, password, agent API keys, calendar.
+
+Every page has tappable `?` hints.
+
+## Auth
+
+- Email + password via Better Auth.
+- **Public sign-up is disabled.** One account is created with the seed script.
+- Change your password in Settings. There is no forgot-password email; resets go through the seed/DB.
+
+## Local setup
 
 ```bash
+cp .env.example .env.local   # fill in DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
+npm install
+npm run db:generate
+npm run db:migrate
+ALLOW_SIGNUP=true SEED_EMAIL=you@example.com SEED_PASSWORD=secret SEED_NAME=You npm run seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run seed` loads `.env.local` and also claims any rows that predate accounts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Vercel + Neon)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Import the repo into Vercel.
+2. Vercel → Storage → create a **Neon** database. Use the **pooled** connection string for `DATABASE_URL`.
+3. Set env vars:
+   - `BETTER_AUTH_SECRET` (`openssl rand -hex 32`)
+   - `BETTER_AUTH_URL` = `https://your-app.vercel.app`
+4. Apply the schema and create your account:
+   ```bash
+   DATABASE_URL="postgres://...-pooler..." npm run db:migrate
 
-## Learn More
+   DATABASE_URL="postgres://...-pooler..." \
+   BETTER_AUTH_SECRET="..." \
+   BETTER_AUTH_URL="https://your-app.vercel.app" \
+   ALLOW_SIGNUP=true \
+   SEED_EMAIL="you@example.com" \
+   SEED_PASSWORD="..." \
+   npx tsx scripts/seed.ts
+   ```
+5. Deploy: `vercel --prod`.
 
-To learn more about Next.js, take a look at the following resources:
+`ALLOW_SIGNUP` is only for the seed run; leave it unset in Vercel so public
+sign-up stays off.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Agent API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a key in **Settings → Agent API keys**. Send it as:
 
-## Deploy on Vercel
+```
+Authorization: Bearer <key>
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Keys are per-user, revocable, and have no expiry or rate limit. The dashboard
+uses its session cookie instead.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Method | Path | Body / query |
+|---|---|---|
+| GET | `/api/v1/tasks` | `?status=inbox&energy=low&projectId=` |
+| POST | `/api/v1/tasks` | `{ title, bucket?, energy?, firstStep?, status?, due?, projectId? }` |
+| PATCH | `/api/v1/tasks/:id` | `{ status?, bucket?, energy?, actualMin?, ... }` |
+| GET | `/api/v1/daily` | `?date=YYYY-MM-DD` |
+| POST | `/api/v1/daily` | `{ date, brainDump?, highlightTaskId?, microCommitment?, microDone?, energy? }` |
+| GET | `/api/v1/sprints` | — |
+| POST | `/api/v1/sprints` | `{ taskId?, kind?: "focus" \| "break" }` |
+| PATCH | `/api/v1/sprints` | `{ id, focusRating?, notes? }` |
+| GET | `/api/v1/pick` | `?energy=low` |
+| GET | `/api/v1/summary` | `?week=YYYY-MM-DD` |
+| GET/POST | `/api/v1/review` | `?week=` / `{ weekStart, wentWell?, didntGoWell?, nextFocus? }` |
+| GET/POST | `/api/v1/goals` | `{ title, why?, targetDate? }` |
+| GET/POST | `/api/v1/projects` | `{ title, goalId? }` |
+| GET | `/api/v1/calendar/health` | creates and removes a test event |
+
+## Calendar (optional)
+
+1. Google Cloud → enable **Google Calendar API** → create a **service account** → JSON key.
+2. Share your Google Calendar with the service-account email, permission **“Make changes to events.”**
+3. Add `GOOGLE_SERVICE_ACCOUNT_JSON` in Vercel (raw JSON or base64).
+4. In **Settings → Calendar**, paste your calendar ID and set times (defaults: 09:00 / 20:00 / 09:00, Asia/Kolkata).
+5. Press **Test calendar**.
+
+Events created: daily highlight, micro-commitment, due tasks. They stay on the
+calendar when a task is completed. Times are per user.
+
+## Known limits
+
+- Public sign-up is off; adding users needs a seed/admin script.
+- No forgot-password email; reset via the seed script or DB.
+- Calendar needs the service-account JSON before it does anything.
+- No push notifications; the dashboard polls via SWR.
+- Vercel Hobby is non-commercial. Neon free tier idle-suspends.
+- Add a nightly `pg_dump` to S3 before storing data you care about.
