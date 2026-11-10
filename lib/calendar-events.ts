@@ -1,5 +1,6 @@
 import { deleteEvent, writeEvent } from "./calendar";
 import { getDaily, getTask, getUserSettings } from "./data";
+import { localDateInZone } from "./time";
 
 const DEFAULT_TIMEZONE = "Asia/Kolkata";
 const DEFAULT_HIGHLIGHT_TIME = "09:00";
@@ -109,10 +110,13 @@ export async function testCalendar(userId: string) {
   }
 
   const now = new Date();
-  const date = now.toISOString().slice(0, 10);
-  const time = `${String(now.getUTCHours()).padStart(2, "0")}:${String(
-    now.getUTCMinutes(),
-  ).padStart(2, "0")}`;
+  const date = localDateInZone(now, settings.timeZone);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: settings.timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(now);
   const id = `kaitest${Date.now()}`;
 
   try {
