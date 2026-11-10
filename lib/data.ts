@@ -9,6 +9,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { getDb } from "./db";
+import { addDays, currentMonday, zonedMidnightToUtc } from "./time";
+import { scoreTasks, summarizeWeek } from "./statistics";
 import {
   dailyPlans,
   goals,
@@ -20,12 +22,10 @@ import {
 } from "./db/schema";
 
 export type TaskRow = typeof tasks.$inferSelect;
+const DEFAULT_TIMEZONE = "Asia/Kolkata";
+
 type TaskStatus = TaskRow["status"];
 type TaskEnergy = TaskRow["energy"];
-
-function isoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 export async function getUserSettings(userId: string) {
   const [row] = await getDb()
@@ -47,10 +47,18 @@ export async function getTask(userId: string, id: string) {
 
 export async function listTasks(
   userId: string,
-  opts: { status?: TaskStatus; energy?: TaskEnergy; projectId?: string } = {},
+  opts: {
+    status?: TaskStatus | "open";
+    energy?: TaskEnergy;
+    projectId?: string;
+  } = {},
 ) {
   const where = [eq(tasks.userId, userId)];
-  if (opts.status) where.push(eq(tasks.status, opts.status));
+  if (opts.status === "open") {
+    where.push(inArray(tasks.status, ["inbox", "active"]));
+  } else if (opts.status) {
+    where.push(eq(tasks.status, opts.status));
+  }
   if (opts.energy) where.push(eq(tasks.energy, opts.energy));
   if (opts.projectId) where.push(eq(tasks.projectId, opts.projectId));
   return getDb()
@@ -156,6 +164,7 @@ export async function startSprint(
   userId: string,
   input: { taskId?: string | null; kind?: "focus" | "break" },
 ) {
+  if (await activeSprint(userId)) return null;
   const [row] = await getDb()
     .insert(sprints)
     .values({
@@ -179,7 +188,13 @@ export async function stopSprint(
       focusRating: input.focusRating ?? null,
       notes: input.notes ?? null,
     })
-    .where(and(eq(sprints.id, id), eq(sprints.userId, userId)))
+    .where(
+      and(
+        eq(sprints.id, id),
+        eq(sprints.userId, userId),
+        isNull(sprints.endedAt),
+      ),
+    )
     .returning();
   return row ?? null;
 }
@@ -214,26 +229,17 @@ export async function pickTask(userId: string, energy?: TaskEnergy) {
       ),
     );
   if (!rows.length) return null;
-
-  const bucketWeight = { must: 6, should: 4, could: 2 };
-  const now = new Date();
-  const scored = rows.map((task) => {
-    let score = bucketWeight[task.bucket];
-    if (energy && task.energy === energy) score += 5;
-    if (task.due && new Date(task.due) <= now) score += 4;
-    if (task.estimateMin && task.estimateMin <= 15) score += 1;
-    if (task.firstStep) score += 1;
-    return { task, score };
-  });
-  scored.sort((a, b) => b.score - a.score);
-  return scored[0].task;
+  return scoreTasks(rows, energy)[0].task;
 }
 
-export async function weekSummary(userId: string, weekStart: string) {
+export async function weekSummary(userId: string, weekStart?: string) {
   const db = getDb();
-  const start = new Date(`${weekStart}T00:00:00.000Z`);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 7);
+  const timeZone =
+    (await getUserSettings(userId))?.timezone || DEFAULT_TIMEZONE;
+  const startDate = weekStart ?? currentMonday(timeZone);
+  const endDate = addDays(startDate, 7);
+  const start = zonedMidnightToUtc(startDate, timeZone);
+  const end = zonedMidnightToUtc(endDate, timeZone);
 
   const plans = await db
     .select()
@@ -241,8 +247,8 @@ export async function weekSummary(userId: string, weekStart: string) {
     .where(
       and(
         eq(dailyPlans.userId, userId),
-        gte(dailyPlans.date, weekStart),
-        lt(dailyPlans.date, isoDate(end)),
+        gte(dailyPlans.date, startDate),
+        lt(dailyPlans.date, endDate),
       ),
     );
   const done = await db
@@ -267,31 +273,24 @@ export async function weekSummary(userId: string, weekStart: string) {
       ),
     );
 
-  const doneIds = new Set(done.map((t) => t.id));
-  const highlightPlans = plans.filter((p) => p.highlightTaskId);
-  const byBucket = { must: 0, should: 0, could: 0 };
-  for (const task of done) byBucket[task.bucket] += 1;
+  // A highlight can be finished after its week ends. Count it by task, not by date.
+  const highlightIds = plans
+    .map((plan) => plan.highlightTaskId)
+    .filter((id): id is string => Boolean(id));
+  const doneHighlights = highlightIds.length
+    ? await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.userId, userId),
+            eq(tasks.status, "done"),
+            inArray(tasks.id, highlightIds),
+          ),
+        )
+    : [];
 
-  const sprintMinutes = sessions.reduce((sum, s) => {
-    if (!s.endedAt) return sum;
-    return sum + (s.endedAt.getTime() - s.startedAt.getTime()) / 60000;
-  }, 0);
-
-  return {
-    weekStart,
-    daysTracked: plans.length,
-    highlightsSet: highlightPlans.length,
-    highlightsDone: highlightPlans.filter((p) => doneIds.has(p.highlightTaskId!))
-      .length,
-    microDone: plans.filter((p) => p.microDone).length,
-    tasksDone: done.length,
-    byBucket,
-    urgentShare: done.length ? byBucket.must / done.length : 0,
-    estimateMin: done.reduce((sum, t) => sum + (t.estimateMin ?? 0), 0),
-    actualMin: done.reduce((sum, t) => sum + (t.actualMin ?? 0), 0),
-    sprints: sessions.length,
-    sprintMinutes: Math.round(sprintMinutes),
-  };
+  return summarizeWeek(startDate, plans, done, sessions, doneHighlights);
 }
 
 export async function getReview(userId: string, weekStart: string) {
