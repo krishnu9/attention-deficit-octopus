@@ -1,3 +1,5 @@
+import { currentMonday as mondayForZone } from "./time";
+
 export type Task = {
   id: string;
   title: string;
@@ -100,12 +102,6 @@ export function today() {
 }
 
 export function currentMonday() {
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return localDate(d);
-}
-
-export function localDate(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return mondayForZone(zone);
 }

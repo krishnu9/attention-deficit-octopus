@@ -1,17 +1,12 @@
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { badRequest, getUserId, unauthorized } from "@/lib/api-auth";
 import { weekSummary } from "@/lib/data";
-
-function currentMonday() {
-  const now = new Date();
-  now.setUTCDate(now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
-  return now.toISOString().slice(0, 10);
-}
+import { isDate } from "@/lib/validation";
 
 export async function GET(request: Request) {
   const userId = await getUserId(request);
   if (!userId) return unauthorized();
 
-  const url = new URL(request.url);
-  const week = url.searchParams.get("week") ?? currentMonday();
+  const week = new URL(request.url).searchParams.get("week") ?? undefined;
+  if (week && !isDate(week)) return badRequest("week must be YYYY-MM-DD");
   return Response.json(await weekSummary(userId, week));
 }

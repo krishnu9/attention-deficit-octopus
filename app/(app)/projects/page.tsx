@@ -12,6 +12,7 @@ import {
   label,
 } from "@/components/ui";
 import { Hint } from "@/components/hint";
+import { useBusy } from "@/components/use-busy";
 
 export default function ProjectsPage() {
   const {
@@ -31,13 +32,12 @@ export default function ProjectsPage() {
   const [goalWhy, setGoalWhy] = useState("");
   const [projectTitle, setProjectTitle] = useState("");
   const [projectGoal, setProjectGoal] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
+  const { busy, error, run } = useBusy();
 
   async function addGoal(event: React.FormEvent) {
     event.preventDefault();
     if (!goalTitle.trim()) return;
-    setBusy("goal");
-    try {
+    await run("goal", async () => {
       await api("/api/v1/goals", {
         method: "POST",
         body: JSON.stringify({
@@ -48,16 +48,13 @@ export default function ProjectsPage() {
       setGoalTitle("");
       setGoalWhy("");
       mutateGoals();
-    } finally {
-      setBusy(null);
-    }
+    });
   }
 
   async function addProject(event: React.FormEvent) {
     event.preventDefault();
     if (!projectTitle.trim()) return;
-    setBusy("project");
-    try {
+    await run("project", async () => {
       await api("/api/v1/projects", {
         method: "POST",
         body: JSON.stringify({
@@ -67,9 +64,7 @@ export default function ProjectsPage() {
       });
       setProjectTitle("");
       mutateProjects();
-    } finally {
-      setBusy(null);
-    }
+    });
   }
 
   const goalName = (id: string | null) =>
@@ -95,6 +90,12 @@ export default function ProjectsPage() {
           message="Could not load projects."
           onRetry={() => mutateProjects()}
         />
+      ) : null}
+
+      {error ? (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
       ) : null}
 
       <Card>

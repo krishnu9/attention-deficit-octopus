@@ -9,8 +9,11 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
-    // Public sign-up stays off; the seed script flips this for its one run.
-    disableSignUp: process.env.ALLOW_SIGNUP !== "true",
+    // Public sign-up stays off. The seed script sets ALLOW_SIGNUP locally only.
+    disableSignUp: !(
+      process.env.ALLOW_SIGNUP === "true" &&
+      process.env.NODE_ENV !== "production"
+    ),
   },
   user: {
     additionalFields: {

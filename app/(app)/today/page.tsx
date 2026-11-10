@@ -22,6 +22,7 @@ import {
   label,
 } from "@/components/ui";
 import { Hint } from "@/components/hint";
+import { useBusy } from "@/components/use-busy";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -39,7 +40,7 @@ export default function TodayPage() {
     error: planError,
   } = useSWR<DailyPlan>(date ? `/api/v1/daily?date=${date}` : null, fetcher);
   const { data: tasks = [], mutate: mutateTasks } = useSWR<Task[]>(
-    "/api/v1/tasks",
+    "/api/v1/tasks?status=open",
     fetcher,
   );
   const { data: sprintData, mutate: mutateSprints } = useSWR<{
@@ -51,7 +52,7 @@ export default function TodayPage() {
   const [rating, setRating] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [dateLabel, setDateLabel] = useState("");
-  const [saving, setSaving] = useState<string | null>(null);
+  const { busy, error, run } = useBusy();
 
   useEffect(() => {
     // Next 16 rejects new Date() during prerender, so defer the clock until mount.
@@ -78,23 +79,19 @@ export default function TodayPage() {
     ? (now ?? 0) - new Date(activeSprint.startedAt).getTime()
     : 0;
 
-  async function run(key: string, action: () => Promise<void>) {
-    setSaving(key);
-    try {
-      await action();
-    } finally {
-      setSaving(null);
-    }
-  }
-
   async function savePlan(patch: Partial<DailyPlan>) {
     if (!plan) return;
     mutatePlan({ ...plan, ...patch }, false);
-    await api("/api/v1/daily", {
-      method: "POST",
-      body: JSON.stringify({ date, ...patch }),
-    });
-    mutatePlan();
+    try {
+      await api("/api/v1/daily", {
+        method: "POST",
+        body: JSON.stringify({ date, ...patch }),
+      });
+      mutatePlan();
+    } catch (caught) {
+      mutatePlan();
+      throw caught;
+    }
   }
 
   async function pickForMe() {
@@ -167,6 +164,12 @@ export default function TodayPage() {
         <Hint k="overwhelm" />
       </header>
 
+      {error ? (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+
       <Card>
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -185,13 +188,13 @@ export default function TodayPage() {
                   <button
                     key={n}
                     className={btnGhost}
-                    disabled={saving === "stop"}
+                    disabled={busy === "stop"}
                     onClick={() => stopSprint(n)}
                   >
                     {n}
                   </button>
                 ))}
-                {saving === "stop" ? <Spinner /> : null}
+                {busy === "stop" ? <Spinner /> : null}
               </div>
             ) : (
               <button className={btn} onClick={() => setRating(true)}>
@@ -199,7 +202,7 @@ export default function TodayPage() {
               </button>
             )
           ) : (
-            <BusyButton busy={saving === "start"} onClick={startSprint}>
+            <BusyButton busy={busy === "start"} onClick={startSprint}>
               Start focus
             </BusyButton>
           )}
@@ -210,7 +213,7 @@ export default function TodayPage() {
         <Card>
           <div className={`${label} flex items-center`}>
             1 · Brain dump <Hint k="brainDump" />
-            {saving === "dump" ? (
+            {busy === "dump" ? (
               <span className="ml-2 normal-case tracking-normal">Saving…</span>
             ) : null}
           </div>
@@ -235,11 +238,11 @@ export default function TodayPage() {
           </div>
           <div className="flex items-center">
             <BusyButton
-              busy={saving === "pick"}
+              busy={busy === "pick"}
               className="inline-flex items-center gap-1 text-sm text-accent"
               onClick={pickForMe}
             >
-              {saving === "pick" ? "Picking" : "Pick for me"}
+              {busy === "pick" ? "Picking" : "Pick for me"}
             </BusyButton>
             <Hint k="pickForMe" />
           </div>
@@ -255,14 +258,14 @@ export default function TodayPage() {
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <BusyButton
-                busy={saving === "done"}
+                busy={busy === "done"}
                 onClick={completeHighlight}
               >
-                {saving === "done" ? "Saving" : "Mark done"}
+                {busy === "done" ? "Saving" : "Mark done"}
               </BusyButton>
               <BusyButton
                 className={btnGhost}
-                busy={saving === "change"}
+                busy={busy === "change"}
                 onClick={() =>
                   run("change", () => savePlan({ highlightTaskId: null }))
                 }
@@ -276,7 +279,7 @@ export default function TodayPage() {
             {open.slice(0, 6).map((task) => (
               <button
                 key={task.id}
-                disabled={saving === "pick"}
+                disabled={busy === "pick"}
                 onClick={() =>
                   run("pick", () => savePlan({ highlightTaskId: task.id }))
                 }
@@ -317,7 +320,7 @@ export default function TodayPage() {
               />
               <BusyButton
                 className={plan.microDone ? btn : btnGhost}
-                busy={saving === "micro" || saving === "microDone"}
+                busy={busy === "micro" || busy === "microDone"}
                 onClick={() =>
                   run("microDone", () => savePlan({ microDone: !plan.microDone }))
                 }
@@ -334,14 +337,14 @@ export default function TodayPage() {
             {(["low", "med", "high"] as const).map((energy) => (
               <button
                 key={energy}
-                disabled={saving === "energy"}
+                disabled={busy === "energy"}
                 onClick={() => run("energy", () => savePlan({ energy }))}
                 className={`${plan.energy === energy ? btn : btnGhost} disabled:opacity-40`}
               >
                 {energy}
               </button>
             ))}
-            {saving === "energy" ? <Spinner className="text-muted" /> : null}
+            {busy === "energy" ? <Spinner className="text-muted" /> : null}
           </div>
         </>
       ) : null}

@@ -31,12 +31,19 @@ export function calendarConfigured() {
   return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 }
 
-function addMinutes(time: string, minutes: number) {
+export function addMinutes(date: string, time: string, minutes: number) {
   const [hours, mins] = time.split(":").map(Number);
-  const total = (hours * 60 + mins + minutes) % (24 * 60);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
-    total % 60,
-  ).padStart(2, "0")}`;
+  const total = hours * 60 + mins + minutes;
+  const dayShift = Math.floor(total / (24 * 60));
+  const minutesOfDay = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+  const end = new Date(`${date}T00:00:00.000Z`);
+  end.setUTCDate(end.getUTCDate() + dayShift);
+  return {
+    date: end.toISOString().slice(0, 10),
+    time: `${String(Math.floor(minutesOfDay / 60)).padStart(2, "0")}:${String(
+      minutesOfDay % 60,
+    ).padStart(2, "0")}`,
+  };
 }
 
 function client() {
@@ -61,6 +68,7 @@ async function upsert(
   event: EventInput,
 ) {
   const calendar = client();
+  const end = addMinutes(event.date, event.time, event.durationMin);
   const requestBody = {
     id: eventId,
     summary: event.summary,
@@ -70,7 +78,7 @@ async function upsert(
       timeZone: event.timeZone,
     },
     end: {
-      dateTime: `${event.date}T${addMinutes(event.time, event.durationMin)}:00`,
+      dateTime: `${end.date}T${end.time}:00`,
       timeZone: event.timeZone,
     },
     reminders: {
