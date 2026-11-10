@@ -12,6 +12,7 @@ import {
 import { Card, BusyButton, LoadError, Skeleton, input, label } from "@/components/ui";
 import { Hint } from "@/components/hint";
 import type { HintKey } from "@/lib/hints";
+import { useBusy } from "@/components/use-busy";
 
 function Stat({
   name,
@@ -56,13 +57,12 @@ export default function WeekPage() {
     week ? `/api/v1/review?week=${week}` : null,
     fetcher,
   );
-  const [saving, setSaving] = useState(false);
+  const { busy, error: actionError, run } = useBusy();
 
   async function saveReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    setSaving(true);
-    try {
+    await run("review", async () => {
       await api("/api/v1/review", {
         method: "POST",
         body: JSON.stringify({
@@ -73,11 +73,8 @@ export default function WeekPage() {
         }),
       });
       mutateReview();
-    } finally {
-      setSaving(false);
-    }
+    });
   }
-
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -95,6 +92,12 @@ export default function WeekPage() {
 
       {error ? (
         <LoadError message="Could not load this week." onRetry={() => retrySummary()} />
+      ) : null}
+
+      {actionError ? (
+        <p role="alert" className="text-sm text-danger">
+          {actionError}
+        </p>
       ) : null}
 
       {isLoading ? (
@@ -182,8 +185,8 @@ export default function WeekPage() {
             placeholder="One thing to focus on next week"
             className={`${input} resize-y`}
           />
-          <BusyButton busy={saving} type="submit">
-            {saving ? "Saving" : "Save review"}
+          <BusyButton busy={busy === "review"} type="submit">
+            {busy === "review" ? "Saving" : "Save review"}
           </BusyButton>
         </form>
       </Card>

@@ -13,29 +13,30 @@ import {
   label,
 } from "@/components/ui";
 import { Hint } from "@/components/hint";
+import { useBusy } from "@/components/use-busy";
 
 const buckets = ["must", "should", "could"] as const;
 const energies = ["low", "med", "high"] as const;
 
 export default function InboxPage() {
   const {
-    data: tasks = [],
-    mutate,
+    data: openTasks = [],
+    mutate: mutateOpen,
     isLoading,
-    error,
-  } = useSWR<Task[]>("/api/v1/tasks", fetcher);
+    error: loadError,
+  } = useSWR<Task[]>("/api/v1/tasks?status=open", fetcher);
+  const { data: somedayTasks = [], mutate: mutateSomeday } = useSWR<Task[]>(
+    "/api/v1/tasks?status=someday",
+    fetcher,
+  );
   const [title, setTitle] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
-  const inbox = tasks.filter((task) => task.status === "inbox");
-  const active = tasks.filter((task) => task.status === "active");
+  const { busy, error, run } = useBusy();
+  const inbox = openTasks.filter((task) => task.status === "inbox");
+  const active = openTasks.filter((task) => task.status === "active");
 
-  async function run(key: string, action: () => Promise<void>) {
-    setBusy(key);
-    try {
-      await action();
-    } finally {
-      setBusy(null);
-    }
+  function refresh() {
+    mutateOpen();
+    mutateSomeday();
   }
 
   async function add(event: React.FormEvent) {
@@ -52,7 +53,7 @@ export default function InboxPage() {
         }),
       });
       setTitle("");
-      mutate();
+      refresh();
     });
   }
 
@@ -62,7 +63,7 @@ export default function InboxPage() {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      mutate();
+      refresh();
     });
   }
 
@@ -76,8 +77,14 @@ export default function InboxPage() {
         <p className="text-sm text-muted">Capture first. Decide later.</p>
       </header>
 
+      {loadError ? (
+        <LoadError message="Could not load tasks." onRetry={() => refresh()} />
+      ) : null}
+
       {error ? (
-        <LoadError message="Could not load tasks." onRetry={() => mutate()} />
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
       ) : null}
 
       <form onSubmit={add} className="flex gap-2">
@@ -111,7 +118,7 @@ export default function InboxPage() {
               className="rounded-xl border border-border p-3"
             >
               <p className="font-medium">{task.title}</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <select
                   disabled={busy === task.id}
                   value={task.bucket}
@@ -121,6 +128,7 @@ export default function InboxPage() {
                     })
                   }
                   className={input}
+                  aria-label="Bucket"
                 >
                   {buckets.map((bucket) => (
                     <option key={bucket} value={bucket}>
@@ -137,6 +145,7 @@ export default function InboxPage() {
                     })
                   }
                   className={input}
+                  aria-label="Energy"
                 >
                   {energies.map((energy) => (
                     <option key={energy} value={energy}>
@@ -153,6 +162,22 @@ export default function InboxPage() {
                     }
                   }}
                   placeholder="First 2-min step"
+                  className={input}
+                />
+                <input
+                  disabled={busy === task.id}
+                  type="number"
+                  min={0}
+                  defaultValue={task.estimateMin ?? ""}
+                  onBlur={(event) => {
+                    const next = event.target.value
+                      ? Number(event.target.value)
+                      : null;
+                    if (next !== task.estimateMin) {
+                      patch(task.id, { estimateMin: next });
+                    }
+                  }}
+                  placeholder="Estimate (min)"
                   className={input}
                 />
               </div>
@@ -173,7 +198,7 @@ export default function InboxPage() {
               </div>
             </div>
           ))}
-          {!isLoading && !error && inbox.length === 0 ? (
+          {!isLoading && !loadError && inbox.length === 0 ? (
             <p className="text-sm text-muted">Inbox zero. Nice.</p>
           ) : null}
         </div>
@@ -186,21 +211,65 @@ export default function InboxPage() {
         <div className="mt-2 space-y-2" aria-busy={isLoading}>
           {isLoading ? <Skeleton className="h-10 w-full" /> : null}
           {active.map((task) => (
-            <label
+            <div
               key={task.id}
-              className="flex items-center gap-3 text-sm"
               aria-busy={busy === task.id}
+              className="flex items-center gap-3 text-sm"
             >
               <input
                 type="checkbox"
                 disabled={busy === task.id}
                 onChange={() => patch(task.id, { status: "done" })}
+                aria-label={`Complete ${task.title}`}
               />
-              <span>{task.title}</span>
-            </label>
+              <span className="flex-1">{task.title}</span>
+              <input
+                type="number"
+                min={0}
+                disabled={busy === task.id}
+                defaultValue={task.actualMin ?? ""}
+                onBlur={(event) => {
+                  const next = event.target.value
+                    ? Number(event.target.value)
+                    : null;
+                  if (next !== task.actualMin) {
+                    patch(task.id, { actualMin: next });
+                  }
+                }}
+                placeholder="Actual (min)"
+                className={`${input} w-28`}
+              />
+            </div>
           ))}
-          {!isLoading && !error && active.length === 0 ? (
+          {!isLoading && !loadError && active.length === 0 ? (
             <p className="text-sm text-muted">Nothing active.</p>
+          ) : null}
+        </div>
+      </Card>
+
+      <Card>
+        <p className={`${label} flex items-center`}>
+          Someday · {somedayTasks.length} <Hint k="someday" />
+        </p>
+        <div className="mt-2 space-y-2">
+          {somedayTasks.map((task) => (
+            <div
+              key={task.id}
+              aria-busy={busy === task.id}
+              className="flex items-center gap-3 text-sm"
+            >
+              <span className="flex-1">{task.title}</span>
+              <button
+                disabled={busy === task.id}
+                className={btnGhost}
+                onClick={() => patch(task.id, { status: "inbox" })}
+              >
+                Bring back
+              </button>
+            </div>
+          ))}
+          {somedayTasks.length === 0 ? (
+            <p className="text-sm text-muted">Nothing parked.</p>
           ) : null}
         </div>
       </Card>
