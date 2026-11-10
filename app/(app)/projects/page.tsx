@@ -3,51 +3,73 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { api, fetcher, type Goal, type Project } from "@/lib/client";
-import { Card, btn, input, label } from "@/components/ui";
+import {
+  BusyButton,
+  Card,
+  LoadError,
+  Skeleton,
+  input,
+  label,
+} from "@/components/ui";
 import { Hint } from "@/components/hint";
 
 export default function ProjectsPage() {
-  const { data: goals = [], mutate: mutateGoals } = useSWR<Goal[]>(
-    "/api/v1/goals",
-    fetcher,
-  );
-  const { data: projects = [], mutate: mutateProjects } = useSWR<Project[]>(
-    "/api/v1/projects",
-    fetcher,
-  );
+  const {
+    data: goals = [],
+    mutate: mutateGoals,
+    isLoading: loadingGoals,
+    error: goalsError,
+  } = useSWR<Goal[]>("/api/v1/goals", fetcher);
+  const {
+    data: projects = [],
+    mutate: mutateProjects,
+    isLoading: loadingProjects,
+    error: projectsError,
+  } = useSWR<Project[]>("/api/v1/projects", fetcher);
 
   const [goalTitle, setGoalTitle] = useState("");
   const [goalWhy, setGoalWhy] = useState("");
   const [projectTitle, setProjectTitle] = useState("");
   const [projectGoal, setProjectGoal] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function addGoal(event: React.FormEvent) {
     event.preventDefault();
     if (!goalTitle.trim()) return;
-    await api("/api/v1/goals", {
-      method: "POST",
-      body: JSON.stringify({
-        title: goalTitle.trim(),
-        why: goalWhy.trim() || null,
-      }),
-    });
-    setGoalTitle("");
-    setGoalWhy("");
-    mutateGoals();
+    setBusy("goal");
+    try {
+      await api("/api/v1/goals", {
+        method: "POST",
+        body: JSON.stringify({
+          title: goalTitle.trim(),
+          why: goalWhy.trim() || null,
+        }),
+      });
+      setGoalTitle("");
+      setGoalWhy("");
+      mutateGoals();
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function addProject(event: React.FormEvent) {
     event.preventDefault();
     if (!projectTitle.trim()) return;
-    await api("/api/v1/projects", {
-      method: "POST",
-      body: JSON.stringify({
-        title: projectTitle.trim(),
-        goalId: projectGoal || null,
-      }),
-    });
-    setProjectTitle("");
-    mutateProjects();
+    setBusy("project");
+    try {
+      await api("/api/v1/projects", {
+        method: "POST",
+        body: JSON.stringify({
+          title: projectTitle.trim(),
+          goalId: projectGoal || null,
+        }),
+      });
+      setProjectTitle("");
+      mutateProjects();
+    } finally {
+      setBusy(null);
+    }
   }
 
   const goalName = (id: string | null) =>
@@ -62,11 +84,25 @@ export default function ProjectsPage() {
         </p>
       </header>
 
+      {goalsError ? (
+        <LoadError
+          message="Could not load goals."
+          onRetry={() => mutateGoals()}
+        />
+      ) : null}
+      {projectsError ? (
+        <LoadError
+          message="Could not load projects."
+          onRetry={() => mutateProjects()}
+        />
+      ) : null}
+
       <Card>
         <p className={`${label} flex items-center`}>
           Goals <Hint k="goals" />
         </p>
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2" aria-busy={loadingGoals}>
+          {loadingGoals ? <Skeleton className="h-16 w-full" /> : null}
           {goals.map((goal) => (
             <div key={goal.id} className="rounded-xl border border-border p-3">
               <p className="font-medium">{goal.title}</p>
@@ -75,7 +111,7 @@ export default function ProjectsPage() {
               ) : null}
             </div>
           ))}
-          {goals.length === 0 ? (
+          {!loadingGoals && !goalsError && goals.length === 0 ? (
             <p className="text-sm text-muted">No goals yet.</p>
           ) : null}
         </div>
@@ -92,7 +128,9 @@ export default function ProjectsPage() {
             placeholder="Why it matters"
             className={input}
           />
-          <button className={btn}>Add goal</button>
+          <BusyButton busy={busy === "goal"}>
+            {busy === "goal" ? "Adding" : "Add goal"}
+          </BusyButton>
         </form>
       </Card>
 
@@ -100,7 +138,13 @@ export default function ProjectsPage() {
         <p className={`${label} flex items-center`}>
           Projects <Hint k="projects" />
         </p>
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3" aria-busy={loadingProjects}>
+          {loadingProjects ? (
+            <>
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </>
+          ) : null}
           {projects.map((project) => {
             const pct = project.total
               ? Math.round((project.done / project.total) * 100)
@@ -127,7 +171,7 @@ export default function ProjectsPage() {
               </div>
             );
           })}
-          {projects.length === 0 ? (
+          {!loadingProjects && !projectsError && projects.length === 0 ? (
             <p className="text-sm text-muted">No projects yet.</p>
           ) : null}
         </div>
@@ -153,7 +197,9 @@ export default function ProjectsPage() {
               </option>
             ))}
           </select>
-          <button className={btn}>Add project</button>
+          <BusyButton busy={busy === "project"}>
+            {busy === "project" ? "Adding" : "Add project"}
+          </BusyButton>
         </form>
       </Card>
     </div>

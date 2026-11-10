@@ -10,7 +10,17 @@ import {
   type Sprint,
   type Task,
 } from "@/lib/client";
-import { Card, btn, btnGhost, input, label } from "@/components/ui";
+import {
+  BusyButton,
+  Card,
+  LoadError,
+  Skeleton,
+  Spinner,
+  btn,
+  btnGhost,
+  input,
+  label,
+} from "@/components/ui";
 import { Hint } from "@/components/hint";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -22,10 +32,12 @@ function clock(ms: number) {
 
 export default function TodayPage() {
   const [date, setDate] = useState("");
-  const { data: plan, mutate: mutatePlan, isLoading } = useSWR<DailyPlan>(
-    date ? `/api/v1/daily?date=${date}` : null,
-    fetcher,
-  );
+  const {
+    data: plan,
+    mutate: mutatePlan,
+    isLoading,
+    error: planError,
+  } = useSWR<DailyPlan>(date ? `/api/v1/daily?date=${date}` : null, fetcher);
   const { data: tasks = [], mutate: mutateTasks } = useSWR<Task[]>(
     "/api/v1/tasks",
     fetcher,
@@ -39,6 +51,7 @@ export default function TodayPage() {
   const [rating, setRating] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [dateLabel, setDateLabel] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
     // Next 16 rejects new Date() during prerender, so defer the clock until mount.
@@ -65,6 +78,15 @@ export default function TodayPage() {
     ? (now ?? 0) - new Date(activeSprint.startedAt).getTime()
     : 0;
 
+  async function run(key: string, action: () => Promise<void>) {
+    setSaving(key);
+    try {
+      await action();
+    } finally {
+      setSaving(null);
+    }
+  }
+
   async function savePlan(patch: Partial<DailyPlan>) {
     if (!plan) return;
     mutatePlan({ ...plan, ...patch }, false);
@@ -76,42 +98,58 @@ export default function TodayPage() {
   }
 
   async function pickForMe() {
-    const task = await api<Task | null>(
-      `/api/v1/pick${plan?.energy ? `?energy=${plan.energy}` : ""}`,
-    );
-    if (task) await savePlan({ highlightTaskId: task.id });
+    await run("pick", async () => {
+      const task = await api<Task | null>(
+        `/api/v1/pick${plan?.energy ? `?energy=${plan.energy}` : ""}`,
+      );
+      if (task) await savePlan({ highlightTaskId: task.id });
+    });
   }
 
   async function completeHighlight() {
     if (!highlight) return;
-    await api(`/api/v1/tasks/${highlight.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "done" }),
+    await run("done", async () => {
+      await api(`/api/v1/tasks/${highlight.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "done" }),
+      });
+      mutateTasks();
+      mutatePlan();
     });
-    mutateTasks();
-    mutatePlan();
   }
 
   async function startSprint() {
-    await api("/api/v1/sprints", {
-      method: "POST",
-      body: JSON.stringify({ kind: "focus", taskId: highlight?.id ?? null }),
+    await run("start", async () => {
+      await api("/api/v1/sprints", {
+        method: "POST",
+        body: JSON.stringify({ kind: "focus", taskId: highlight?.id ?? null }),
+      });
+      mutateSprints();
     });
-    mutateSprints();
   }
 
   async function stopSprint(score: number | null) {
     if (!activeSprint) return;
-    await api("/api/v1/sprints", {
-      method: "PATCH",
-      body: JSON.stringify({ id: activeSprint.id, focusRating: score }),
+    await run("stop", async () => {
+      await api("/api/v1/sprints", {
+        method: "PATCH",
+        body: JSON.stringify({ id: activeSprint.id, focusRating: score }),
+      });
+      setRating(false);
+      mutateSprints();
     });
-    setRating(false);
-    mutateSprints();
   }
 
-  if (!date || isLoading || !plan) {
-    return <p className="text-sm text-muted">Loading…</p>;
+  if (!date || (isLoading && !plan)) return <TodaySkeleton />;
+  if (!plan) {
+    return (
+      <LoadError
+        message={
+          planError ? "Could not load today's plan." : "Today's plan is empty."
+        }
+        onRetry={() => mutatePlan()}
+      />
+    );
   }
 
   return (
@@ -144,10 +182,16 @@ export default function TodayPage() {
               <div className="flex items-center gap-1">
                 <span className="mr-1 text-xs text-muted">Focus?</span>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} className={btnGhost} onClick={() => stopSprint(n)}>
+                  <button
+                    key={n}
+                    className={btnGhost}
+                    disabled={saving === "stop"}
+                    onClick={() => stopSprint(n)}
+                  >
                     {n}
                   </button>
                 ))}
+                {saving === "stop" ? <Spinner /> : null}
               </div>
             ) : (
               <button className={btn} onClick={() => setRating(true)}>
@@ -155,9 +199,9 @@ export default function TodayPage() {
               </button>
             )
           ) : (
-            <button className={btn} onClick={startSprint}>
+            <BusyButton busy={saving === "start"} onClick={startSprint}>
               Start focus
-            </button>
+            </BusyButton>
           )}
         </div>
       </Card>
@@ -166,11 +210,16 @@ export default function TodayPage() {
         <Card>
           <div className={`${label} flex items-center`}>
             1 · Brain dump <Hint k="brainDump" />
+            {saving === "dump" ? (
+              <span className="ml-2 normal-case tracking-normal">Saving…</span>
+            ) : null}
           </div>
           <textarea
             key={`${plan.id}-dump`}
             defaultValue={plan.brainDump ?? ""}
-            onBlur={(event) => savePlan({ brainDump: event.target.value })}
+            onBlur={(event) =>
+              run("dump", () => savePlan({ brainDump: event.target.value }))
+            }
             rows={4}
             placeholder="Empty your head. No order needed."
             className={`${input} mt-2 resize-y`}
@@ -185,9 +234,13 @@ export default function TodayPage() {
             <Hint k="highlight" />
           </div>
           <div className="flex items-center">
-            <button className="text-sm text-accent" onClick={pickForMe}>
-              Pick for me
-            </button>
+            <BusyButton
+              busy={saving === "pick"}
+              className="inline-flex items-center gap-1 text-sm text-accent"
+              onClick={pickForMe}
+            >
+              {saving === "pick" ? "Picking" : "Pick for me"}
+            </BusyButton>
             <Hint k="pickForMe" />
           </div>
         </div>
@@ -201,15 +254,21 @@ export default function TodayPage() {
               </p>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              <button className={btn} onClick={completeHighlight}>
-                Mark done
-              </button>
-              <button
+              <BusyButton
+                busy={saving === "done"}
+                onClick={completeHighlight}
+              >
+                {saving === "done" ? "Saving" : "Mark done"}
+              </BusyButton>
+              <BusyButton
                 className={btnGhost}
-                onClick={() => savePlan({ highlightTaskId: null })}
+                busy={saving === "change"}
+                onClick={() =>
+                  run("change", () => savePlan({ highlightTaskId: null }))
+                }
               >
                 Change
-              </button>
+              </BusyButton>
             </div>
           </div>
         ) : (
@@ -217,8 +276,11 @@ export default function TodayPage() {
             {open.slice(0, 6).map((task) => (
               <button
                 key={task.id}
-                onClick={() => savePlan({ highlightTaskId: task.id })}
-                className="block w-full rounded-lg border border-border px-3 py-2 text-left text-sm transition-colors hover:border-accent"
+                disabled={saving === "pick"}
+                onClick={() =>
+                  run("pick", () => savePlan({ highlightTaskId: task.id }))
+                }
+                className="block w-full rounded-lg border border-border px-3 py-2 text-left text-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
               >
                 <span className="mr-2 text-xs uppercase text-muted">
                   {task.bucket}
@@ -246,17 +308,22 @@ export default function TodayPage() {
                 key={`${plan.id}-micro`}
                 defaultValue={plan.microCommitment ?? ""}
                 onBlur={(event) =>
-                  savePlan({ microCommitment: event.target.value })
+                  run("micro", () =>
+                    savePlan({ microCommitment: event.target.value }),
+                  )
                 }
                 placeholder="One tiny step toward a habit"
                 className={input}
               />
-              <button
+              <BusyButton
                 className={plan.microDone ? btn : btnGhost}
-                onClick={() => savePlan({ microDone: !plan.microDone })}
+                busy={saving === "micro" || saving === "microDone"}
+                onClick={() =>
+                  run("microDone", () => savePlan({ microDone: !plan.microDone }))
+                }
               >
                 {plan.microDone ? "Done" : "Not yet"}
-              </button>
+              </BusyButton>
             </div>
           </Card>
 
@@ -267,15 +334,35 @@ export default function TodayPage() {
             {(["low", "med", "high"] as const).map((energy) => (
               <button
                 key={energy}
-                onClick={() => savePlan({ energy })}
-                className={plan.energy === energy ? btn : btnGhost}
+                disabled={saving === "energy"}
+                onClick={() => run("energy", () => savePlan({ energy }))}
+                className={`${plan.energy === energy ? btn : btnGhost} disabled:opacity-40`}
               >
                 {energy}
               </button>
             ))}
+            {saving === "energy" ? <Spinner className="text-muted" /> : null}
           </div>
         </>
       ) : null}
+    </div>
+  );
+}
+
+function TodaySkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true">
+      <div className="flex items-end justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <Skeleton className="h-9 w-36" />
+      </div>
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-36 w-full" />
+      <Skeleton className="h-36 w-full" />
+      <Skeleton className="h-20 w-full" />
     </div>
   );
 }
