@@ -1,106 +1,150 @@
-# Kaizen OS
+# Attention Deficit Octopus
 
-A tiny daily system for ADHD brains, hosted on Vercel with Neon Postgres.
-Multi-user dashboard for humans, per-user REST API for agents, optional Google
-Calendar events.
+Kaizen OS is a small daily system for ADHD brains.
+It helps you choose one task each day.
+It records your real work.
+It shows the results each week.
+Agents can read and write the same data.
+
+## Description
+
+Attention Deficit Octopus is the repository name.
+Kaizen OS is the app name.
+The app gives you a calm dashboard, one daily highlight, and a flexible focus timer.
+It also gives agents a REST API.
+You can connect Google Calendar for reminders.
 
 ## Screens
 
-- **Today** — energy, brain dump, one highlight, one 2-minute commitment, focus sprint, overwhelm mode, pick-for-me.
-- **Inbox** — capture first, triage later (bucket, energy, first step).
-- **Week** — highlight completion, focus minutes, urgent share, estimate vs actual, weekly review.
-- **Projects** — goals and projects with progress bars.
-- **Settings** — account, password, agent API keys, calendar.
+| Screen | Purpose |
+|---|---|
+| **Today** | Energy, `Brain dump`, one highlight, one 2-minute commitment, focus sprint, and overwhelm mode. |
+| **Inbox** | Quick capture and triage. Set a bucket, energy, and first step. |
+| **Week** | Highlight rate, focus minutes, urgent share, time estimate, and weekly review. |
+| **Projects** | Goals and projects with progress bars. |
+| **Settings** | Account, password, agent keys, and calendar. |
 
-Every page has tappable `?` hints.
+Every screen has tappable `?` hints.
+
+## Quick start
+
+1. Copy `.env.example` to `.env.local`.
+2. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`.
+3. Run `npm install`.
+4. Run `npm run db:generate`.
+5. Run `npm run db:migrate`.
+6. Set `ALLOW_SIGNUP=true`, `SEED_EMAIL`, and `SEED_PASSWORD` in the environment.
+7. Run `npm run seed`.
+8. Run `npm run dev`.
+9. Open `http://localhost:3000`.
+
+The seed script creates one account.
+It also claims old rows that have no owner.
+
+## Stack
+
+- Next.js 16 and React 19.
+- Better Auth.
+- Neon Postgres and Drizzle ORM.
+- Tailwind CSS.
+- Google Calendar API. This part is optional.
 
 ## Auth
 
-- Email + password via Better Auth.
-- **Public sign-up is disabled.** One account is created with the seed script.
-- Change your password in Settings. There is no forgot-password email; resets go through the seed/DB.
-
-## Local setup
-
-```bash
-cp .env.example .env.local   # fill in DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL
-npm install
-npm run db:generate
-npm run db:migrate
-ALLOW_SIGNUP=true SEED_EMAIL=you@example.com SEED_PASSWORD=secret SEED_NAME=You npm run seed
-npm run dev
-```
-
-`npm run seed` loads `.env.local` and also claims any rows that predate accounts.
-
-## Deploy (Vercel + Neon)
-
-1. Import the repo into Vercel.
-2. Vercel → Storage → create a **Neon** database. Use the **pooled** connection string for `DATABASE_URL`.
-3. Set env vars:
-   - `BETTER_AUTH_SECRET` (`openssl rand -hex 32`)
-   - `BETTER_AUTH_URL` = `https://your-app.vercel.app`
-4. Apply the schema and create your account:
-   ```bash
-   DATABASE_URL="postgres://...-pooler..." npm run db:migrate
-
-   DATABASE_URL="postgres://...-pooler..." \
-   BETTER_AUTH_SECRET="..." \
-   BETTER_AUTH_URL="https://your-app.vercel.app" \
-   ALLOW_SIGNUP=true \
-   SEED_EMAIL="you@example.com" \
-   SEED_PASSWORD="..." \
-   npx tsx scripts/seed.ts
-   ```
-5. Deploy: `vercel --prod`.
-
-`ALLOW_SIGNUP` is only for the seed run; leave it unset in Vercel so public
-sign-up stays off.
+The app uses email and password.
+Public sign-up is off.
+The seed script creates one account.
+You can change the password in Settings.
+There is no password reset email.
 
 ## Agent API
 
-Create a key in **Settings → Agent API keys**. Send it as:
+Create a key in **Settings**.
+Send the key in the header:
 
 ```
 Authorization: Bearer <key>
 ```
 
-Keys are per-user, revocable, and have no expiry or rate limit. The dashboard
-uses its session cookie instead.
+The key has no expiry and no rate limit.
+The dashboard uses a session cookie instead.
 
-| Method | Path | Body / query |
+| Method | Path | Body or query |
 |---|---|---|
 | GET | `/api/v1/tasks` | `?status=inbox&energy=low&projectId=` |
 | POST | `/api/v1/tasks` | `{ title, bucket?, energy?, firstStep?, status?, due?, projectId? }` |
-| PATCH | `/api/v1/tasks/:id` | `{ status?, bucket?, energy?, actualMin?, ... }` |
+| PATCH | `/api/v1/tasks/:id` | `{ status?, bucket?, energy?, actualMin? }` |
 | GET | `/api/v1/daily` | `?date=YYYY-MM-DD` |
 | POST | `/api/v1/daily` | `{ date, brainDump?, highlightTaskId?, microCommitment?, microDone?, energy? }` |
-| GET | `/api/v1/sprints` | — |
+| GET | `/api/v1/sprints` | None |
 | POST | `/api/v1/sprints` | `{ taskId?, kind?: "focus" \| "break" }` |
 | PATCH | `/api/v1/sprints` | `{ id, focusRating?, notes? }` |
 | GET | `/api/v1/pick` | `?energy=low` |
 | GET | `/api/v1/summary` | `?week=YYYY-MM-DD` |
-| GET/POST | `/api/v1/review` | `?week=` / `{ weekStart, wentWell?, didntGoWell?, nextFocus? }` |
-| GET/POST | `/api/v1/goals` | `{ title, why?, targetDate? }` |
-| GET/POST | `/api/v1/projects` | `{ title, goalId? }` |
-| GET | `/api/v1/calendar/health` | creates and removes a test event |
+| GET | `/api/v1/review` | `?week=YYYY-MM-DD` |
+| POST | `/api/v1/review` | `{ weekStart, wentWell?, didntGoWell?, nextFocus? }` |
+| GET | `/api/v1/goals` | None |
+| POST | `/api/v1/goals` | `{ title, why?, targetDate? }` |
+| GET | `/api/v1/projects` | None |
+| POST | `/api/v1/projects` | `{ title, goalId? }` |
+| GET | `/api/v1/calendar/health` | None |
 
-## Calendar (optional)
+Example:
 
-1. Google Cloud → enable **Google Calendar API** → create a **service account** → JSON key.
-2. Share your Google Calendar with the service-account email, permission **“Make changes to events.”**
-3. Add `GOOGLE_SERVICE_ACCOUNT_JSON` in Vercel (raw JSON or base64).
-4. In **Settings → Calendar**, paste your calendar ID and set times (defaults: 09:00 / 20:00 / 09:00, Asia/Kolkata).
-5. Press **Test calendar**.
+```bash
+curl -X POST https://your-app.vercel.app/api/v1/tasks \
+  -H "Authorization: Bearer $AGENT_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"title":"Email landlord","bucket":"must","energy":"low","firstStep":"Open Gmail"}'
+```
 
-Events created: daily highlight, micro-commitment, due tasks. They stay on the
-calendar when a task is completed. Times are per user.
+## Calendar
 
-## Known limits
+Calendar events are optional.
+To connect Google Calendar:
 
-- Public sign-up is off; adding users needs a seed/admin script.
-- No forgot-password email; reset via the seed script or DB.
-- Calendar needs the service-account JSON before it does anything.
-- No push notifications; the dashboard polls via SWR.
-- Vercel Hobby is non-commercial. Neon free tier idle-suspends.
-- Add a nightly `pg_dump` to S3 before storing data you care about.
+1. Enable the Google Calendar API in Google Cloud.
+2. Create a service account.
+3. Create a JSON key.
+4. Share your calendar with the service account. Use the permission "Make changes to events".
+5. Add `GOOGLE_SERVICE_ACCOUNT_JSON` in Vercel.
+6. Set the calendar ID and times in **Settings**.
+7. Press **Test calendar**.
+
+The app creates three event types:
+
+- The daily highlight.
+- The micro-commitment.
+- The due date of a task.
+
+The app keeps an event after you complete a task.
+Times are set for each user.
+The default timezone is `Asia/Kolkata`.
+
+## Deploy
+
+1. Import the repository in Vercel.
+2. Create a Neon database.
+3. Set `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` in Vercel.
+4. Run `npm run db:migrate` with the Neon URL.
+5. Run the seed script with the Neon URL.
+6. Run `vercel --prod`.
+
+Use the pooled Neon URL for `DATABASE_URL`.
+Use the direct Neon URL for migrations.
+
+## Project structure
+
+- `app/` contains pages and API routes.
+- `components/` contains UI components.
+- `lib/` contains auth, data, calendar, and helpers.
+- `drizzle/` contains SQL migrations.
+- `scripts/seed.ts` creates the first account.
+
+## Notes
+
+- Public sign-up is off.
+- Add a database backup.
+- Vercel Hobby is not for commercial use.
+- The dashboard polls for changes. It has no push update.
+- Neon free tier sleeps when idle.
