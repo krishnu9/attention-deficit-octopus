@@ -146,5 +146,5 @@ Use the direct Neon URL for migrations.
 - Public sign-up is off.
 - Add a database backup.
 - Vercel Hobby is not for commercial use.
-- The dashboard polls for changes. It has no push update.
+- The dashboard refreshes when you save and when the tab regains focus. It has no push update.
 - Neon free tier sleeps when idle.
