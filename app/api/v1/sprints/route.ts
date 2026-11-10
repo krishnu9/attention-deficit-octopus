@@ -1,7 +1,6 @@
 import { badRequest, getUserId, unauthorized } from "@/lib/api-auth";
 import {
   activeSprint,
-  recentSprints,
   startSprint,
   stopSprint,
 } from "@/lib/data";
@@ -10,10 +9,7 @@ import { SPRINT_KINDS, isInteger, isOneOf, isTextOrNull, isUuid } from "@/lib/va
 export async function GET(request: Request) {
   const userId = await getUserId(request);
   if (!userId) return unauthorized();
-  return Response.json({
-    active: await activeSprint(userId),
-    recent: await recentSprints(userId),
-  });
+  return Response.json({ active: await activeSprint(userId) });
 }
 
 export async function POST(request: Request) {

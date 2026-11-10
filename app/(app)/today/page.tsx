@@ -45,7 +45,6 @@ export default function TodayPage() {
   );
   const { data: sprintData, mutate: mutateSprints } = useSWR<{
     active: Sprint | null;
-    recent: Sprint[];
   }>("/api/v1/sprints", fetcher);
 
   const [overwhelm, setOverwhelm] = useState(false);

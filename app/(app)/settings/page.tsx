@@ -33,7 +33,6 @@ export default function SettingsPage() {
   });
 
   async function loadKeys() {
-    setLoadingKeys(true);
     try {
       const { data } = await authClient.apiKey.list();
       setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
@@ -43,18 +42,7 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    let active = true;
-    authClient.apiKey
-      .list()
-      .then(({ data }) => {
-        if (active) setKeys((data?.apiKeys ?? []) as unknown as ApiKey[]);
-      })
-      .finally(() => {
-        if (active) setLoadingKeys(false);
-      });
-    return () => {
-      active = false;
-    };
+    void loadKeys();
   }, []);
 
   async function createKey(event: React.FormEvent) {

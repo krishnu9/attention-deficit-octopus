@@ -209,15 +209,6 @@ export async function activeSprint(userId: string) {
   return row ?? null;
 }
 
-export async function recentSprints(userId: string) {
-  return getDb()
-    .select()
-    .from(sprints)
-    .where(eq(sprints.userId, userId))
-    .orderBy(desc(sprints.startedAt))
-    .limit(10);
-}
-
 export async function pickTask(userId: string, energy?: TaskEnergy) {
   const rows = await getDb()
     .select()
