@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import {
   api,
@@ -39,10 +39,11 @@ export default function TodayPage() {
     isLoading,
     error: planError,
   } = useSWR<DailyPlan>(date ? `/api/v1/daily?date=${date}` : null, fetcher);
-  const { data: tasks = [], mutate: mutateTasks } = useSWR<Task[]>(
-    "/api/v1/tasks?status=open",
-    fetcher,
-  );
+  const {
+    data: tasks = [],
+    mutate: mutateTasks,
+    error: tasksError,
+  } = useSWR<Task[]>("/api/v1/tasks", fetcher);
   const { data: sprintData, mutate: mutateSprints } = useSWR<{
     active: Sprint | null;
   }>("/api/v1/sprints", fetcher);
@@ -72,7 +73,8 @@ export default function TodayPage() {
   const open = tasks.filter(
     (task) => task.status === "inbox" || task.status === "active",
   );
-  const highlight = open.find((task) => task.id === plan?.highlightTaskId);
+  const highlight = tasks.find((task) => task.id === plan?.highlightTaskId);
+  const highlightDone = highlight?.status === "done";
   const activeSprint = sprintData?.active ?? null;
   const elapsed = activeSprint
     ? (now ?? 0) - new Date(activeSprint.startedAt).getTime()
@@ -93,6 +95,27 @@ export default function TodayPage() {
     }
   }
 
+  const dumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const microTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleSave(
+    timer: typeof dumpTimer,
+    kind: "dump" | "micro",
+    patch: Partial<DailyPlan>,
+  ) {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => run(kind, () => savePlan(patch)), 600);
+  }
+
+  function flushSave(
+    timer: typeof dumpTimer,
+    kind: "dump" | "micro",
+    patch: Partial<DailyPlan>,
+  ) {
+    if (timer.current) clearTimeout(timer.current);
+    run(kind, () => savePlan(patch));
+  }
+
   async function pickForMe() {
     await run("pick", async () => {
       const task = await api<Task | null>(
@@ -109,6 +132,14 @@ export default function TodayPage() {
         method: "PATCH",
         body: JSON.stringify({ status: "done" }),
       });
+      // Keep the completed task visible so the picker cannot overwrite the day.
+      mutateTasks(
+        (list = []) =>
+          list.map((task) =>
+            task.id === highlight.id ? { ...task, status: "done" } : task,
+          ),
+        false,
+      );
       mutateTasks();
       mutatePlan();
     });
@@ -157,16 +188,196 @@ export default function TodayPage() {
           </p>
           <h1 className="text-2xl font-semibold">Today</h1>
         </div>
-        <button className={btnGhost} onClick={() => setOverwhelm((v) => !v)}>
-          {overwhelm ? "Show everything" : "Overwhelm mode"}
-        </button>
-        <Hint k="overwhelm" />
+        <div className="flex items-center">
+          <button className={btnGhost} onClick={() => setOverwhelm((v) => !v)}>
+            {overwhelm ? "Exit overwhelm" : "Overwhelm mode"}
+          </button>
+          <Hint k="overwhelm" />
+        </div>
       </header>
 
       {error ? (
         <p role="alert" className="text-sm text-danger">
           {error}
         </p>
+      ) : null}
+
+      <Card>
+        <div className="flex items-center justify-between gap-1">
+          <div className={`${label} flex items-center`}>
+            {overwhelm ? "One thing" : "1 · Today's highlight"}
+            <Hint k="highlight" />
+          </div>
+          {!highlight ? (
+            <div className="flex items-center">
+              <BusyButton
+                busy={busy === "pick"}
+                className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg"
+                onClick={pickForMe}
+              >
+                {busy === "pick" ? "Picking" : "Pick for me"}
+              </BusyButton>
+              <Hint k="pickForMe" />
+            </div>
+          ) : null}
+        </div>
+
+        {!highlight && !tasksError && !overwhelm ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
+            <span className={`${label} flex items-center`}>
+              Energy <Hint k="energy" />
+            </span>
+            {(["low", "med", "high"] as const).map((energy) => (
+              <button
+                key={energy}
+                disabled={busy === "energy"}
+                onClick={() => run("energy", () => savePlan({ energy }))}
+                className={`${plan.energy === energy ? btn : btnGhost} disabled:opacity-40`}
+              >
+                {energy}
+              </button>
+            ))}
+            {busy === "energy" ? <Spinner className="text-muted" /> : null}
+          </div>
+        ) : null}
+
+        {highlightDone && highlight ? (
+          <div className="mt-3">
+            <p className="text-lg font-medium text-muted">{highlight.title}</p>
+            <p className="mt-1 text-xs uppercase tracking-wide text-muted">
+              Done today
+            </p>
+            <div className="mt-4">
+              <BusyButton
+                className={btnGhost}
+                busy={busy === "change"}
+                onClick={() =>
+                  run("change", () => savePlan({ highlightTaskId: null }))
+                }
+              >
+                Change highlight
+              </BusyButton>
+            </div>
+          </div>
+        ) : highlight ? (
+          <div className="mt-3">
+            <p className="text-lg font-medium">{highlight.title}</p>
+            {highlight.firstStep ? (
+              <p className="mt-1 text-sm text-muted">
+                First step: {highlight.firstStep}
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <BusyButton busy={busy === "done"} onClick={completeHighlight}>
+                {busy === "done" ? "Saving" : "Mark done"}
+              </BusyButton>
+              <BusyButton
+                className={btnGhost}
+                busy={busy === "change"}
+                onClick={() =>
+                  run("change", () => savePlan({ highlightTaskId: null }))
+                }
+              >
+                Change
+              </BusyButton>
+            </div>
+          </div>
+        ) : tasksError ? (
+          <div className="mt-3">
+            <LoadError
+              message="Could not load tasks."
+              onRetry={() => mutateTasks()}
+            />
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {open.slice(0, 6).map((task) => (
+              <button
+                key={task.id}
+                disabled={busy === "pick"}
+                onClick={() =>
+                  run("pick", () => savePlan({ highlightTaskId: task.id }))
+                }
+                className="block w-full rounded-lg border border-border px-3 py-2 text-left text-sm transition-colors hover:border-fg/40 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
+              >
+                <span className="mr-2 text-xs uppercase text-muted">
+                  {task.bucket}
+                </span>
+                {task.title}
+              </button>
+            ))}
+            {open.length === 0 ? (
+              <p className="text-sm text-muted">
+                No open tasks. Capture some in Inbox.
+              </p>
+            ) : null}
+          </div>
+        )}
+      </Card>
+
+      {!overwhelm ? (
+        <>
+          <Card>
+            <div className={`${label} flex items-center`}>
+              2 · Brain dump <Hint k="brainDump" />
+              {busy === "dump" ? (
+                <span className="ml-2 normal-case tracking-normal">Saving…</span>
+              ) : null}
+            </div>
+            <textarea
+              aria-label="Brain dump"
+              key={`${plan.id}-dump`}
+              defaultValue={plan.brainDump ?? ""}
+              onChange={(event) =>
+                scheduleSave(dumpTimer, "dump", {
+                  brainDump: event.target.value,
+                })
+              }
+              onBlur={(event) =>
+                flushSave(dumpTimer, "dump", {
+                  brainDump: event.target.value,
+                })
+              }
+              rows={4}
+              placeholder="Empty your head. No order needed."
+              className={`${input} mt-2 resize-y`}
+            />
+          </Card>
+
+          <Card>
+            <div className={`${label} flex items-center`}>
+              3 · Micro-commitment (2 minutes) <Hint k="micro" />
+            </div>
+            <div className="mt-2 flex gap-2">
+              <input
+                aria-label="Micro-commitment"
+                key={`${plan.id}-micro`}
+                defaultValue={plan.microCommitment ?? ""}
+                onChange={(event) =>
+                  scheduleSave(microTimer, "micro", {
+                    microCommitment: event.target.value,
+                  })
+                }
+                onBlur={(event) =>
+                  flushSave(microTimer, "micro", {
+                    microCommitment: event.target.value,
+                  })
+                }
+                placeholder="One tiny step toward a habit"
+                className={input}
+              />
+              <BusyButton
+                className={plan.microDone ? btn : btnGhost}
+                busy={busy === "micro" || busy === "microDone"}
+                onClick={() =>
+                  run("microDone", () => savePlan({ microDone: !plan.microDone }))
+                }
+              >
+                {plan.microDone ? "Done" : "Not yet"}
+              </BusyButton>
+            </div>
+          </Card>
+        </>
       ) : null}
 
       <Card>
@@ -177,6 +388,9 @@ export default function TodayPage() {
             </p>
             <p className="mt-1 font-mono text-3xl tabular-nums">
               {activeSprint ? clock(elapsed) : "ready"}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {highlight?.title ?? "No task chosen"}
             </p>
           </div>
           {activeSprint ? (
@@ -201,152 +415,16 @@ export default function TodayPage() {
               </button>
             )
           ) : (
-            <BusyButton busy={busy === "start"} onClick={startSprint}>
+            <BusyButton
+              busy={busy === "start"}
+              disabled={!highlight || highlightDone}
+              onClick={startSprint}
+            >
               Start focus
             </BusyButton>
           )}
         </div>
       </Card>
-
-      {!overwhelm ? (
-        <Card>
-          <div className={`${label} flex items-center`}>
-            1 · Brain dump <Hint k="brainDump" />
-            {busy === "dump" ? (
-              <span className="ml-2 normal-case tracking-normal">Saving…</span>
-            ) : null}
-          </div>
-          <textarea
-            key={`${plan.id}-dump`}
-            defaultValue={plan.brainDump ?? ""}
-            onBlur={(event) =>
-              run("dump", () => savePlan({ brainDump: event.target.value }))
-            }
-            rows={4}
-            placeholder="Empty your head. No order needed."
-            className={`${input} mt-2 resize-y`}
-          />
-        </Card>
-      ) : null}
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className={`${label} flex items-center`}>
-            {overwhelm ? "One thing" : "2 · Today's highlight"}
-            <Hint k="highlight" />
-          </div>
-          <div className="flex items-center">
-            <BusyButton
-              busy={busy === "pick"}
-              className="inline-flex items-center gap-1 text-sm text-accent"
-              onClick={pickForMe}
-            >
-              {busy === "pick" ? "Picking" : "Pick for me"}
-            </BusyButton>
-            <Hint k="pickForMe" />
-          </div>
-        </div>
-
-        {highlight ? (
-          <div className="mt-3">
-            <p className="text-lg font-medium">{highlight.title}</p>
-            {highlight.firstStep ? (
-              <p className="mt-1 text-sm text-muted">
-                First step: {highlight.firstStep}
-              </p>
-            ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <BusyButton
-                busy={busy === "done"}
-                onClick={completeHighlight}
-              >
-                {busy === "done" ? "Saving" : "Mark done"}
-              </BusyButton>
-              <BusyButton
-                className={btnGhost}
-                busy={busy === "change"}
-                onClick={() =>
-                  run("change", () => savePlan({ highlightTaskId: null }))
-                }
-              >
-                Change
-              </BusyButton>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {open.slice(0, 6).map((task) => (
-              <button
-                key={task.id}
-                disabled={busy === "pick"}
-                onClick={() =>
-                  run("pick", () => savePlan({ highlightTaskId: task.id }))
-                }
-                className="block w-full rounded-lg border border-border px-3 py-2 text-left text-sm transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
-              >
-                <span className="mr-2 text-xs uppercase text-muted">
-                  {task.bucket}
-                </span>
-                {task.title}
-              </button>
-            ))}
-            {open.length === 0 ? (
-              <p className="text-sm text-muted">
-                No open tasks. Capture some in Inbox.
-              </p>
-            ) : null}
-          </div>
-        )}
-      </Card>
-
-      {!overwhelm ? (
-        <>
-          <Card>
-            <div className={`${label} flex items-center`}>
-              3 · Micro-commitment (2 minutes) <Hint k="micro" />
-            </div>
-            <div className="mt-2 flex gap-2">
-              <input
-                key={`${plan.id}-micro`}
-                defaultValue={plan.microCommitment ?? ""}
-                onBlur={(event) =>
-                  run("micro", () =>
-                    savePlan({ microCommitment: event.target.value }),
-                  )
-                }
-                placeholder="One tiny step toward a habit"
-                className={input}
-              />
-              <BusyButton
-                className={plan.microDone ? btn : btnGhost}
-                busy={busy === "micro" || busy === "microDone"}
-                onClick={() =>
-                  run("microDone", () => savePlan({ microDone: !plan.microDone }))
-                }
-              >
-                {plan.microDone ? "Done" : "Not yet"}
-              </BusyButton>
-            </div>
-          </Card>
-
-          <div className="flex items-center gap-3">
-            <span className={`${label} flex items-center`}>
-              Energy <Hint k="energy" />
-            </span>
-            {(["low", "med", "high"] as const).map((energy) => (
-              <button
-                key={energy}
-                disabled={busy === "energy"}
-                onClick={() => run("energy", () => savePlan({ energy }))}
-                className={`${plan.energy === energy ? btn : btnGhost} disabled:opacity-40`}
-              >
-                {energy}
-              </button>
-            ))}
-            {busy === "energy" ? <Spinner className="text-muted" /> : null}
-          </div>
-        </>
-      ) : null}
     </div>
   );
 }
