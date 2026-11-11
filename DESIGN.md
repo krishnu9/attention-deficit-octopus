@@ -113,7 +113,8 @@ This is an Operate surface. Familiar patterns win over expression. Cards stack i
 Precision shows as restraint. Every control has the same 8px radius, the same border tone, and the same focus ring. The interface is monochrome: ink fills primary actions and marks the current position. Signal Blue appears only on the focus ring and the input focus border. Surfaces are flat: a hairline border separates a card, and no shadow is used.
 
 **Key Characteristics:**
-- One column, 672px max, generous vertical rhythm.
+- A 256px sidebar and a 56px header frame one calm content column.
+- A quiet today-and-week rail joins on wide screens only.
 - Cool grey background in light mode, near-black in dark mode.
 - An ink action color; Signal Blue is reserved for focus.
 - Small uppercase labels carry section meaning; headings stay at 24px or below.
@@ -172,11 +173,15 @@ The palette mirrors into a near-black room. `--bg` `#0b0d10`, `--fg` `#eceef2`, 
 
 ## Layout
 
-A single column, centered, capped at 672px (`max-w-2xl`), with 16px side padding, 24px top padding, and 96px bottom padding so the last card clears the phone's home indicator. A top nav row sits above the content with 24px between it and the first card.
+A dashboard shell: a 256px sidebar on the left, a sticky 56px header across the top, and one content column. From 1024px the sidebar is fixed and the header and content start after it. Below 1024px the sidebar becomes a navigation drawer and the header holds the menu button.
+
+The header and the content share a 1024px max width and 24px side padding, so their left edges line up. The header carries the full date on the left and the Capture ghost link on the right. Below 640px the date hides, because the page title below already carries it.
+
+From 1280px a 256px rail sits to the right of the content with 24px between them. It holds the day's highlight and the week's three real numbers. It is sticky at 80px from the top. Below 1280px it hides completely.
 
 Cards stack in a 16px vertical rhythm. Inside a card, 20px padding, with 8px to 16px between a label and its content. Multi-column grids appear only on Week: two columns on mobile, three at the `sm` breakpoint (640px). Forms with two fields sit in one column on mobile and split into two at `sm`.
 
-Density is deliberately low. One idea per card. When a second element would double the reading load, it moves to its own card or hides behind Overwhelm mode.
+Density is deliberately low. One idea per card. When a second element would double the reading load, it moves to its own card or hides behind Overwhelm mode. The rail shows three numbers, never a backlog count.
 
 ## Elevation & Depth
 
@@ -224,7 +229,17 @@ Borders are 1px Hairline. No double borders, no insets, no clipping masks. Progr
 - **Placeholders:** Short, calm instructions ("Empty your head. No order needed."), never a label substitute — a 12px uppercase label sits above.
 
 ### Navigation
-A single horizontal row that wraps on narrow screens. Links are 14px, 8px by 12px padding, 8px radius. The active link gets a 6% Ink wash, Ink medium text, and `aria-current="page"`; idle links are Quiet Grey and turn Ink on hover. Sign out sits at the far right, same shape, Quiet Grey, no border.
+A fixed 256px sidebar in Card White with a Hairline right border. The brand sits at the top in a 64px row: a 32px rounded ink square with a `K`, the name in 14px semibold, and the tagline in 12px Quiet Grey. A 12px uppercase "Workspace" label opens the link list.
+
+Each link is a 14px row with a 16px line icon and 12px of horizontal padding. The active link gets a 6% Ink wash, Ink medium text, and `aria-current="page"`; idle links are Quiet Grey and turn Ink on hover. Sign out sits at the bottom above the user email, in the same shape with a Quiet Grey mark.
+
+Below 1024px the sidebar becomes a 288px drawer over a 30% Ink scrim. It opens from the top-left menu button, closes on the scrim, the close button, Escape, or a link. It is the only overlay in the product.
+
+### Header
+A sticky 56px bar in Card White with a Hairline bottom border and no shadow. It shares the content max width. The full date sits on the left in a 12px uppercase Quiet Grey label. The Capture ghost link sits on the right and goes to Inbox. Below 1024px a 36px menu button joins on the left; below 640px the date hides.
+
+### Day Rail
+A 256px sticky column at 1280px and above, 80px from the top. It holds two cards. "Today's highlight" shows the task title at 18px medium, then "In focus" or "Done today", then the 2-minute step if one exists. "This week" is a divided list of Highlights, Focus time, and Tasks done, with Geist Mono tabular values and an Open Week ghost link. Every card uses the standard card, label, and ghost styles. The rail is real work only; it never shows a backlog count. It never repeats the page: the highlight card hides on Today, and the week card hides on Week.
 
 ### Stat Tile
 Week's signature component. A 12px radius bordered tile, 12px padding, with a 12px uppercase muted label (plus optional `?` dot), a 20px semibold value, and an optional 12px muted hint line. Tiles sit two-up on mobile and three-up at `sm`. The value always shows real work, never a target.
@@ -241,14 +256,15 @@ A full-width Ghost button used for task selection: 8px radius, Hairline border, 
 - **Do** pair every number with a plain-language hint in 12px Quiet Grey, so the user does not have to interpret the metric.
 - **Do** keep error text at 14px Ember with `role="alert"`, and offer Retry.
 - **Do** show a skeleton that matches the real layout while data loads, with `aria-busy` and `motion-reduce` respected.
-- **Do** keep the bottom padding at 96px so the final card is reachable on a phone.
+- **Do** align the sticky header and the content to the same max width.
+- **Do** keep the bottom padding so the final card is reachable on a phone.
 
 ### Don't:
 - **Don't** add a second accent color, a gradient, or a colored section background.
 - **Don't** lift, scale, or translate controls on hover.
 - **Don't** use red for missed days, streaks, counters, or urgency. Ember is for errors only.
 - **Don't** turn a label into a heading to add emphasis. Size and case carry the hierarchy.
-- **Don't** introduce a modal, drawer, or toast pattern. Feedback stays inline in the card that caused it.
+- **Don't** introduce a modal, drawer, or toast pattern for content. The mobile navigation drawer is the one overlay; keep it to navigation. Feedback stays inline in the card that caused it.
 - **Don't** add a chip, badge, or tag component. Use Ghost buttons and uppercase bucket tags.
 - **Don't** set interactive text below 14px or hint text below 12px.
 - **Don't** add a manual theme toggle. Follow the operating system.

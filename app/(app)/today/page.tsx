@@ -183,7 +183,7 @@ export default function TodayPage() {
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted">
+          <p className="text-xs uppercase tracking-wide text-muted sm:hidden">
             {dateLabel}
           </p>
           <h1 className="text-2xl font-semibold">Today</h1>
