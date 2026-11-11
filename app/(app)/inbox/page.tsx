@@ -214,31 +214,55 @@ export default function InboxPage() {
             <div
               key={task.id}
               aria-busy={busy === task.id}
-              className="flex items-center gap-3 text-sm"
+              className="flex items-start gap-3 text-sm"
             >
               <input
                 type="checkbox"
+                className="mt-1 shrink-0"
                 disabled={busy === task.id}
                 onChange={() => patch(task.id, { status: "done" })}
                 aria-label={`Complete ${task.title}`}
               />
-              <span className="flex-1">{task.title}</span>
-              <input
-                type="number"
-                min={0}
-                disabled={busy === task.id}
-                defaultValue={task.actualMin ?? ""}
-                onBlur={(event) => {
-                  const next = event.target.value
-                    ? Number(event.target.value)
-                    : null;
-                  if (next !== task.actualMin) {
-                    patch(task.id, { actualMin: next });
-                  }
-                }}
-                placeholder="Actual (min)"
-                className={`${input} w-28`}
-              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 font-medium">
+                    {task.title}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={busy === task.id}
+                    defaultValue={task.actualMin ?? ""}
+                    onBlur={(event) => {
+                      const next = event.target.value
+                        ? Number(event.target.value)
+                        : null;
+                      if (next !== task.actualMin) {
+                        patch(task.id, { actualMin: next });
+                      }
+                    }}
+                    placeholder="Actual (min)"
+                    className={`${input} w-28! shrink-0`}
+                  />
+                </div>
+                <div className="mt-1 flex items-center gap-1">
+                  <span aria-hidden="true" className="text-xs text-muted">
+                    ↳
+                  </span>
+                  <input
+                    disabled={busy === task.id}
+                    defaultValue={task.firstStep ?? ""}
+                    onBlur={(event) => {
+                      if (event.target.value !== (task.firstStep ?? "")) {
+                        patch(task.id, { firstStep: event.target.value });
+                      }
+                    }}
+                    placeholder="Next step"
+                    aria-label={`First step for ${task.title}`}
+                    className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-muted outline-none transition-colors hover:border-border focus:border-accent focus:bg-card focus:text-fg focus-visible:outline-2 focus-visible:outline-accent"
+                  />
+                </div>
+              </div>
             </div>
           ))}
           {!isLoading && !loadError && active.length === 0 ? (
