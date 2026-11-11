@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T00:00:00.000Z",
+  "title": "Design System: Kaizen OS",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Signal Blue",
+        "canonical": "#3b5bdb",
+        "tonalRamp": ["#1a2a6b", "#233a94", "#2e49b8", "#3b5bdb", "#6b86e8", "#9aadf2", "#c5d0f8", "#e6ebfc"]
+      },
+      "accent-fg": {
+        "role": "primary",
+        "displayName": "Chalk",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#101010", "#2a2a2a", "#4a4a4a", "#6e6e6e", "#969696", "#c0c0c0", "#e4e4e4", "#ffffff"]
+      },
+      "danger": {
+        "role": "primary",
+        "displayName": "Ember",
+        "canonical": "#c2410c",
+        "tonalRamp": ["#3a1203", "#5e1f07", "#812c0a", "#a3350b", "#c2410c", "#e0692f", "#efa381", "#fbded0"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f6f6f3",
+        "tonalRamp": ["#1b1b18", "#2f2f2a", "#4a4a43", "#6b6b62", "#8f8f85", "#b7b7ad", "#d9d9d1", "#f6f6f3"]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1b1d22",
+        "tonalRamp": ["#0b0c0e", "#12141a", "#1b1d22", "#33373f", "#4d525d", "#6b7280", "#a0a6b2", "#d8dbe2"]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#101010", "#2a2a2a", "#4a4a4a", "#6e6e6e", "#969696", "#c0c0c0", "#e4e4e4", "#ffffff"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e2e2dc",
+        "tonalRamp": ["#17171a", "#33342e", "#50514a", "#6e6f68", "#8c8d86", "#abaca5", "#c8c9c2", "#e2e2dc"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Grey",
+        "canonical": "#6b7280",
+        "tonalRamp": ["#101319", "#1c222e", "#2f3a4d", "#46536e", "#5a677f", "#6b7280", "#9aa2af", "#ccd1d8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Screen title. One per screen, 24px semibold." },
+      "title": { "displayName": "Title", "purpose": "The chosen highlight task on Today." },
+      "stat": { "displayName": "Stat", "purpose": "Week metric values in stat tiles." },
+      "body": { "displayName": "Body", "purpose": "All interface text, buttons, inputs, task rows." },
+      "label": { "displayName": "Label", "purpose": "Uppercase card section headings and field labels." },
+      "timer": { "displayName": "Timer", "purpose": "Sprint clock. Tabular monospace digits." }
+    },
+    "shadows": [
+      { "name": "paper-lift", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "Default card resting state." },
+      { "name": "popup-lift", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "The ? hint popover only." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for color and opacity transitions (Tailwind transition-colors)." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover and focus color changes." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One per card at most. Fills Signal Blue when the user commits something.",
+      "html": "<button class=\"ds-btn-primary\">Mark done</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border: 0; border-radius: 0.5rem; background: var(--accent, #3b5bdb); color: var(--accent-fg, #ffffff); padding: 0.5rem 1rem; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.43; font-weight: 500; cursor: pointer; transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #3b5bdb); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.4; cursor: default; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action and toggle. Border turns blue on hover; nothing moves.",
+      "html": "<button class=\"ds-btn-ghost\">Overwhelm mode</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border, #e2e2dc); background: transparent; color: var(--fg, #1b1d22); padding: 0.375rem 0.75rem; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; cursor: pointer; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-ghost:hover { border-color: var(--accent, #3b5bdb); color: var(--accent, #3b5bdb); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--accent, #3b5bdb); outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.4; cursor: default; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Full-width field on the page canvas. Focus shifts the border to Signal Blue.",
+      "html": "<label class=\"ds-label\">Micro-commitment</label><input class=\"ds-input\" placeholder=\"One tiny step toward a habit\" />",
+      "css": ".ds-label { display: block; font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.025em; text-transform: uppercase; color: var(--muted, #6b7280); margin-bottom: 0.25rem; } .ds-input { width: 100%; border-radius: 0.5rem; border: 1px solid var(--border, #e2e2dc); background: var(--bg, #f6f6f3); color: var(--fg, #1b1d22); padding: 0.5rem 0.75rem; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; outline: none; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-input::placeholder { color: var(--muted, #6b7280); } .ds-input:focus { border-color: var(--accent, #3b5bdb); outline: 2px solid var(--accent, #3b5bdb); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "One step per card. Opens with a 12px uppercase muted label, never a heading.",
+      "html": "<section class=\"ds-card\"><p class=\"ds-card-label\">2 · Today's highlight</p><p class=\"ds-card-title\">Draft the invoice for the studio</p><p class=\"ds-card-hint\">First step: open the template file.</p></section>",
+      "css": ".ds-card { border-radius: 1rem; border: 1px solid var(--border, #e2e2dc); background: var(--card, #ffffff); padding: 1.25rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); } .ds-card-label { margin: 0 0 0.5rem; font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.025em; text-transform: uppercase; color: var(--muted, #6b7280); } .ds-card-title { margin: 0; font-family: Geist, system-ui, sans-serif; font-size: 1.125rem; font-weight: 500; line-height: 1.5; color: var(--fg, #1b1d22); } .ds-card-hint { margin: 0.25rem 0 0; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; color: var(--muted, #6b7280); }"
+    },
+    {
+      "name": "Stat Tile",
+      "kind": "card",
+      "refersTo": "stat-tile",
+      "description": "Week metric. Label, real value, plain-language hint. Two-up mobile, three-up at 640px.",
+      "html": "<div class=\"ds-stat\"><p class=\"ds-stat-label\">Focus time</p><p class=\"ds-stat-value\">145m</p><p class=\"ds-stat-hint\">6 sprints</p></div>",
+      "css": ".ds-stat { border-radius: 0.75rem; border: 1px solid var(--border, #e2e2dc); background: var(--card, #ffffff); padding: 0.75rem; } .ds-stat-label { margin: 0; font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.025em; text-transform: uppercase; color: var(--muted, #6b7280); } .ds-stat-value { margin: 0.25rem 0 0; font-family: Geist, system-ui, sans-serif; font-size: 1.25rem; font-weight: 600; line-height: 1.4; color: var(--fg, #1b1d22); } .ds-stat-hint { margin: 0; font-family: Geist, system-ui, sans-serif; font-size: 0.75rem; color: var(--muted, #6b7280); }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Top navigation row. Active item gets a 10% blue wash; others stay Quiet Grey.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link ds-nav-link-active\" href=\"#\">Today</a><a class=\"ds-nav-link\" href=\"#\">Inbox</a><a class=\"ds-nav-link\" href=\"#\">Week</a><a class=\"ds-nav-link\" href=\"#\">Projects</a></nav>",
+      "css": ".ds-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; font-family: Geist, system-ui, sans-serif; } .ds-nav-link { border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; color: var(--muted, #6b7280); text-decoration: none; transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-link:hover { color: var(--fg, #1b1d22); } .ds-nav-link:focus-visible { outline: 2px solid var(--accent, #3b5bdb); outline-offset: 2px; } .ds-nav-link-active { background: color-mix(in srgb, var(--accent, #3b5bdb) 10%, transparent); color: var(--accent, #3b5bdb); font-weight: 500; }"
+    },
+    {
+      "name": "Hint Dot",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The product's teaching model. A 16px ? after a label; opens a 224px popover in place.",
+      "html": "<span class=\"ds-hint-wrap\"><span class=\"ds-hint-label\">Energy</span><button class=\"ds-hint\" aria-label=\"What does this mean?\">?</button><span class=\"ds-hint-pop\">Pick the energy you actually have, not the energy you wish you had.</span></span>",
+      "css": ".ds-hint-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.25rem; font-family: Geist, system-ui, sans-serif; } .ds-hint-label { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.025em; text-transform: uppercase; color: var(--muted, #6b7280); } .ds-hint { display: inline-flex; height: 1rem; width: 1rem; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid var(--border, #e2e2dc); background: transparent; font-size: 10px; line-height: 1; color: var(--muted, #6b7280); cursor: pointer; transition: border-color 150ms, color 150ms; } .ds-hint:hover { border-color: var(--accent, #3b5bdb); color: var(--accent, #3b5bdb); } .ds-hint:focus-visible { outline: 2px solid var(--accent, #3b5bdb); outline-offset: 2px; } .ds-hint-pop { position: absolute; left: 0; top: 1.5rem; z-index: 20; width: 14rem; border-radius: 0.5rem; border: 1px solid var(--border, #e2e2dc); background: var(--card, #ffffff); padding: 0.5rem; font-size: 0.75rem; font-weight: 400; line-height: 1.375; color: var(--muted, #6b7280); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }"
+    },
+    {
+      "name": "Task Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Full-width selectable row. Picking one sets the day's highlight and clears the list.",
+      "html": "<button class=\"ds-task\"><span class=\"ds-task-bucket\">admin</span>Reply to the two emails that matter</button>",
+      "css": ".ds-task { display: block; width: 100%; border-radius: 0.5rem; border: 1px solid var(--border, #e2e2dc); background: transparent; padding: 0.5rem 0.75rem; text-align: left; font-family: Geist, system-ui, sans-serif; font-size: 0.875rem; color: var(--fg, #1b1d22); cursor: pointer; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-task:hover { border-color: var(--accent, #3b5bdb); } .ds-task:focus-visible { outline: 2px solid var(--accent, #3b5bdb); } .ds-task:disabled { opacity: 0.6; cursor: default; } .ds-task-bucket { margin-right: 0.5rem; font-size: 0.75rem; text-transform: uppercase; color: var(--muted, #6b7280); }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "8px rounded track. Signal Blue fill shows real progress only.",
+      "html": "<div class=\"ds-progress\"><div class=\"ds-progress-fill\" style=\"width: 62%\"></div></div>",
+      "css": ".ds-progress { height: 0.5rem; width: 100%; border-radius: 9999px; background: var(--border, #e2e2dc); overflow: hidden; } .ds-progress-fill { height: 100%; border-radius: 9999px; background: var(--accent, #3b5bdb); transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Desk",
+    "overview": "A cleared wooden desk with one thing on it. The interface is warm off-white paper, thin grey rules, and a single blue mark where the next action lives. Nothing else competes for attention. The system is quiet on purpose: a person arrives on a hard day, and the screen must not add weight.\n\nThis is an Operate surface. Familiar patterns win over expression. Cards stack in one narrow column, each one holding a single step. The color count is small, the type scale is short, and the spacing does the separating work that borders and boxes would otherwise do loudly.\n\nPrecision shows as restraint. Every control has the same 8px radius, the same border tone, and the same focus ring. The one blue accent marks action and current position, and it appears rarely enough to stay meaningful. Depth is a whisper: a card shadow that reads as paper lift, never as a floating panel.",
+    "keyCharacteristics": [
+      "One column, 672px max, generous vertical rhythm.",
+      "Warm paper background in light mode, near-black blue-grey in dark mode.",
+      "A single blue accent reserved for action, active state, and focus.",
+      "Small uppercase labels carry section meaning; headings stay at 24px or below.",
+      "Borders define structure; shadows stay almost invisible.",
+      "Monospace only for numbers that tick and keys that get copied.",
+      "Every screen offers one clear next action and no count that shames."
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "Signal Blue marks action, active state, or focus. Never decoration, never a category tag, never a chart series.", "section": "colors" },
+      { "name": "The Quiet Surface Rule", "body": "Neutral surfaces separate by tone and hairline, not by saturation. No tinted panels, no colored headers.", "section": "colors" },
+      { "name": "The Small Label Rule", "body": "A card opens with a 12px uppercase muted label, not an 18px heading. Meaning comes from case and color, so the eye is not pulled into hierarchy.", "section": "typography" },
+      { "name": "The Two-Size Rule", "body": "A screen has one title size (24px) and one body size (14px). Intermediate sizes exist only for the highlight task (18px) and stat values (20px).", "section": "typography" },
+      { "name": "The Tabular Rule", "body": "Any number that changes over time uses tabular-nums. Any key or token the user copies uses Geist Mono.", "section": "typography" },
+      { "name": "The Border-First Rule", "body": "If a boundary is needed, add a hairline border before a shadow. Shadows never carry meaning on their own.", "section": "elevation" },
+      { "name": "The No-Float Rule", "body": "Controls never lift on hover. Hover changes border color or opacity, never position or elevation.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the card, input, btn, btnGhost, and label constants from components/ui.tsx. They are the system.",
+      "Do open every card with a 12px uppercase Quiet Grey label.",
+      "Do keep Signal Blue for action, active, and focus. One primary button per card.",
+      "Do pair every number with a plain-language hint in 12px Quiet Grey, so the user does not have to interpret the metric.",
+      "Do keep error text at 14px Ember with role=\"alert\", and offer Retry.",
+      "Do show a skeleton that matches the real layout while data loads, with aria-busy and motion-reduce respected.",
+      "Do keep the bottom padding at 96px so the final card is reachable on a phone."
+    ],
+    "donts": [
+      "Don't add a second accent color, a gradient, or a colored section background.",
+      "Don't lift, scale, or translate controls on hover.",
+      "Don't use red for missed days, streaks, counters, or urgency. Ember is for errors only.",
+      "Don't turn a label into a heading to add emphasis. Size and case carry the hierarchy.",
+      "Don't introduce a modal, drawer, or toast pattern. Feedback stays inline in the card that caused it.",
+      "Don't add a chip, badge, or tag component. Use Ghost buttons and uppercase bucket tags.",
+      "Don't set interactive text below 14px or hint text below 12px.",
+      "Don't add a manual theme toggle. Follow the operating system."
+    ]
+  }
+}

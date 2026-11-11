@@ -36,9 +36,10 @@ export default function Nav() {
         <Link
           key={href}
           href={href}
+          aria-current={pathname.startsWith(href) ? "page" : undefined}
           className={`rounded-lg px-3 py-2 text-sm transition-colors ${
             pathname.startsWith(href)
-              ? "bg-accent/10 font-medium text-accent"
+              ? "bg-fg/[0.06] font-medium text-fg"
               : "text-muted hover:text-fg"
           }`}
         >
