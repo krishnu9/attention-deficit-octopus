@@ -214,7 +214,7 @@ export default function InboxPage() {
             <div
               key={task.id}
               aria-busy={busy === task.id}
-              className="flex items-center gap-3 text-sm"
+              className="flex flex-wrap items-center gap-3 text-sm"
             >
               <input
                 type="checkbox"
@@ -222,7 +222,19 @@ export default function InboxPage() {
                 onChange={() => patch(task.id, { status: "done" })}
                 aria-label={`Complete ${task.title}`}
               />
-              <span className="flex-1">{task.title}</span>
+              <span className="min-w-0 flex-1">{task.title}</span>
+              <input
+                disabled={busy === task.id}
+                defaultValue={task.firstStep ?? ""}
+                onBlur={(event) => {
+                  if (event.target.value !== (task.firstStep ?? "")) {
+                    patch(task.id, { firstStep: event.target.value });
+                  }
+                }}
+                placeholder="First 2-min step"
+                className={`${input} w-40!`}
+              />
+              <Hint k="firstStep" />
               <input
                 type="number"
                 min={0}
@@ -237,7 +249,7 @@ export default function InboxPage() {
                   }
                 }}
                 placeholder="Actual (min)"
-                className={`${input} w-28`}
+                className={`${input} w-24!`}
               />
             </div>
           ))}

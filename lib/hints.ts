@@ -13,6 +13,7 @@ export const hints = {
   overwhelm: "Hides everything except your one highlight and the timer.",
   inbox: "Capture first, decide later. Nothing here needs a decision yet.",
   bucket: "Must, should, could: importance, not urgency.",
+  firstStep: "The physical first action. Starting is the hard part.",
   activate: "Moves it into the pool that Today can pick from.",
   someday: "Parks it without deleting it.",
   weekHighlights: "Days you set a highlight and completed it.",
