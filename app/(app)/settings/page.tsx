@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Hint } from "@/components/hint";
+import { InstallHint } from "@/components/install-hint";
 import {
   BusyButton,
   Card,
@@ -156,6 +157,7 @@ export default function SettingsPage() {
         <p className={label}>Account</p>
         <p className="mt-2 text-sm">{session?.user?.name}</p>
         <p className="text-sm text-muted">{session?.user?.email}</p>
+        <InstallHint />
       </Card>
 
       <Card>

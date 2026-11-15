@@ -5,6 +5,7 @@ import { hints, type HintKey } from "@/lib/hints";
 
 export function Hint({ k }: { k: HintKey }) {
   const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -28,7 +29,12 @@ export function Hint({ k }: { k: HintKey }) {
     <span ref={ref} className="relative inline-flex align-middle">
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          // Flip left when the 224px popover would cross the right edge.
+          const left = ref.current?.getBoundingClientRect().left ?? 0;
+          setFlip(left + 240 > window.innerWidth);
+          setOpen((value) => !value);
+        }}
         aria-label="What does this mean?"
         aria-expanded={open}
         title={hints[k]}
@@ -39,7 +45,7 @@ export function Hint({ k }: { k: HintKey }) {
       {open ? (
         <span
           role="tooltip"
-          className="absolute left-0 top-8 z-20 w-56 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-2 text-xs font-normal normal-case leading-snug tracking-normal text-muted shadow-lg"
+          className={`absolute top-8 z-20 w-56 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-2 text-xs font-normal normal-case leading-snug tracking-normal text-muted shadow-lg ${flip ? "right-0" : "left-0"}`}
         >
           {hints[k]}
         </span>

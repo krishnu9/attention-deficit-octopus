@@ -381,7 +381,7 @@ export default function TodayPage() {
       ) : null}
 
       <Card>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className={`${label} flex items-center`}>
               Sprint <Hint k="sprint" />
@@ -395,7 +395,7 @@ export default function TodayPage() {
           </div>
           {activeSprint ? (
             rating ? (
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-xs text-muted">Focus?</span>
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
