@@ -14,7 +14,7 @@ async function main() {
   console.log("seed: start");
   const email = process.env.SEED_EMAIL;
   const password = process.env.SEED_PASSWORD;
-  const name = process.env.SEED_NAME ?? "Kaizen";
+  const name = process.env.SEED_NAME ?? "Inky";
 
   if (!email || !password) {
     console.error("Set SEED_EMAIL and SEED_PASSWORD.");

@@ -1,6 +1,6 @@
 # Attention Deficit Octopus
 
-Kaizen OS is a small daily system for ADHD brains.
+Inky is a small daily system for ADHD brains.
 It helps you choose one task each day.
 It records your real work.
 It shows the results each week.
@@ -9,7 +9,7 @@ Agents can read and write the same data.
 ## Description
 
 Attention Deficit Octopus is the repository name.
-Kaizen OS is the app name.
+Inky is the app name.
 The app gives you a calm dashboard, one daily highlight, and a flexible focus timer.
 It also gives agents a REST API.
 You can connect Google Calendar for reminders.

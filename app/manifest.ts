@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kaizen OS",
-    short_name: "Kaizen",
+    name: "Inky",
+    short_name: "Inky",
     description: "A tiny daily system for ADHD brains.",
     start_url: "/today",
     scope: "/",
