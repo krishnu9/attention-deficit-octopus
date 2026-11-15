@@ -13,11 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kaizen OS",
+  title: "Inky",
   description: "A tiny daily system for ADHD brains.",
   appleWebApp: {
     capable: true,
-    title: "Kaizen OS",
+    title: "Inky",
     statusBarStyle: "default",
   },
 };

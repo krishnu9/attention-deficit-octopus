@@ -1,5 +1,5 @@
 ---
-name: Kaizen OS
+name: Inky
 description: Small steps. No guilt. Just show up.
 colors:
   accent: "#2563eb"
@@ -100,7 +100,7 @@ components:
     padding: "0.75rem"
 ---
 
-# Design System: Kaizen OS
+# Design System: Inky
 
 ## Overview
 

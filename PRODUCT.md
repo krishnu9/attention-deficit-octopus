@@ -12,7 +12,7 @@ Primary users are adults with ADHD who use the app during a normal work day, oft
 
 ## Product Purpose
 
-Kaizen OS is a small daily system for ADHD brains. It limits the day to one highlight, records real work, and shows the week honestly. Success means the user starts the chosen task and can see their real effort without guilt.
+Inky is a small daily system for ADHD brains. It limits the day to one highlight, records real work, and shows the week honestly. Success means the user starts the chosen task and can see their real effort without guilt.
 
 ## Positioning
 
@@ -41,7 +41,7 @@ The product gives agents and the dashboard the same data through one REST API. A
 
 ## Brand Commitments
 
-- App name: Kaizen OS. Repository name: Attention Deficit Octopus.
+- App name: Inky. Repository name: Attention Deficit Octopus.
 - Tagline: "Small steps. No guilt. Just show up."
 - Voice is calm, direct, and free of guilt. Do not shame the user for missed days.
 - The `?` hints are part of the product's teaching model and must stay.

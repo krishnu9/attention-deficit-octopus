@@ -89,7 +89,7 @@ export async function syncDueTask(
     if (task.due) {
       await writeEvent(settings.calendarId, dueEventId(task.id), {
         summary: `Due: ${task.title}`,
-        description: "From Kaizen OS.",
+        description: "From Inky.",
         date: task.due,
         time: settings.dueTime,
         durationMin: 15,
@@ -121,7 +121,7 @@ export async function testCalendar(userId: string) {
 
   try {
     await writeEvent(settings.calendarId, id, {
-      summary: "Kaizen test event",
+      summary: "Inky test event",
       description: "This is a test from your dashboard. It should disappear.",
       date,
       time,
