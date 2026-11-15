@@ -1,11 +1,11 @@
 export const card =
   "rounded-xl border border-border bg-card p-5";
 export const input =
-  "w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-accent";
+  "w-full rounded-lg border border-border bg-bg px-3 py-2 text-base outline-none focus:border-accent focus-visible:outline-2 focus-visible:outline-accent sm:text-sm";
 export const btn =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-fg px-4 py-2 text-sm font-medium text-bg transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40";
+  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-fg px-4 py-2 text-sm font-medium text-bg transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40 sm:min-h-0";
 export const btnGhost =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:border-fg/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:border-fg/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40 sm:min-h-0";
 export const label = "text-xs font-medium uppercase tracking-wide text-muted";
 
 export function Card({

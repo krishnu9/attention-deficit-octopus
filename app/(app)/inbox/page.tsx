@@ -93,7 +93,6 @@ export default function InboxPage() {
           onChange={(event) => setTitle(event.target.value)}
           placeholder="What's on your mind?"
           className={input}
-          autoFocus
         />
         <BusyButton busy={busy === "add"}>
           {busy === "add" ? "Adding" : "Add"}
